@@ -1,0 +1,162 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   Cultural Therapy — Design Tokens
+   Earth palette is the default. Indigo Dusk is
+   selectable via [data-palette="indigo"].
+   ============================================ */
+
+:root {
+  /* Type */
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-sans: "Inter Tight", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+  --radius-pill: 999px;
+
+  /* Earth palette (default) */
+  --ct-parchment: #f4ece1;
+  --ct-bone: #faf5ec;
+  --ct-ink: #1c1612;
+  --ct-ink-2: #3a2f27;
+  --ct-ink-3: #6b5a4a;
+  --ct-line: rgba(28, 22, 18, 0.12);
+
+  --ct-terracotta: #b3563a;
+  --ct-terracotta-2: #8a3d29;
+  --ct-rust: #6b2f1d;
+  --ct-ochre: #c8884a;
+  --ct-forest: #2f4a32;
+  --ct-teal: #1f3a3a;
+  --ct-crisis: #b3322a;
+
+  /* Motif density (subtle by default) */
+  --motif-opacity: 0.08;
+}
+
+[data-palette="indigo"] {
+  --ct-parchment: #ece6f0;
+  --ct-bone: #f5f0f8;
+  --ct-ink: #161222;
+  --ct-ink-2: #2a2240;
+  --ct-ink-3: #5a4f72;
+  --ct-line: rgba(22, 18, 34, 0.14);
+  --ct-terracotta: #6c4ab8;
+  --ct-terracotta-2: #4d3490;
+  --ct-rust: #2f1f63;
+  --ct-ochre: #b89060;
+  --ct-forest: #2c4759;
+  --ct-teal: #233d4f;
+  --ct-crisis: #b53a48;
+}
+
+[data-motif="none"] {
+  --motif-opacity: 0;
+}
+[data-motif="subtle"] {
+  --motif-opacity: 0.08;
+}
+[data-motif="prominent"] {
+  --motif-opacity: 0.18;
+}
+
+[data-theme="dark"] {
+  --ct-parchment: #1a1410;
+  --ct-bone: #221a14;
+  --ct-ink: #f4ece1;
+  --ct-ink-2: #d8cdbf;
+  --ct-ink-3: #a89887;
+  --ct-line: rgba(244, 236, 225, 0.12);
+}
+
+/* Base */
+html,
+body {
+  background: var(--ct-parchment);
+  color: var(--ct-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100dvh;
+  /* respect iOS notch */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: var(--ct-terracotta);
+  color: var(--ct-bone);
+}
+
+a {
+  color: inherit;
+}
+
+/* Display type */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ct-ink-3);
+}
+
+/* Reusable card */
+.surface {
+  background: var(--ct-bone);
+  border: 1px solid var(--ct-line);
+  border-radius: var(--radius-lg);
+}
+
+/* Focus ring — accessibility, never remove */
+:where(button, a, input, textarea, select):focus-visible {
+  outline: 2px solid var(--ct-terracotta);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Touch target floor — every interactive element */
+button,
+[role="button"],
+a.btn,
+.tap {
+  min-height: 44px;
+}
+
+/* Hide scrollbars on horizontal swipers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Mobile-first: bottom nav reserves bottom space */
+.has-bottom-nav {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) {
+  .has-bottom-nav {
+    padding-bottom: 0;
+  }
+}
