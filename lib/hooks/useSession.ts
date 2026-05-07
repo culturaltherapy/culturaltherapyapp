@@ -30,6 +30,31 @@ export function useSession(): SessionState {
         setState({ userId: null, profile: null, loading: false });
         return;
       }
+
+      // Flush any pending onboarding data saved before email confirmation
+      const pending = localStorage.getItem("ct_pending_profile");
+      if (pending) {
+        try {
+          const s = JSON.parse(pending);
+          await supa.from("profiles").upsert({
+            id: session.user.id,
+            alias: s.alias?.trim() || null,
+            pronouns: s.pronouns || null,
+            descent: s.descent,
+            languages: s.languages,
+            country: s.country,
+            city: s.shareCity ? s.city || null : null,
+            experience_tags: s.experienceTags,
+            diagnosis: s.diagnosis || null,
+            diagnosis_visibility: s.diagnosisVisible ? "tribe" : "private",
+            id_verified: true,
+            accepts_tribe_requests: true,
+            accepts_dms: true
+          }, { onConflict: "id" });
+          localStorage.removeItem("ct_pending_profile");
+        } catch (_) {}
+      }
+
       const { data: profile } = await supa
         .from("profiles")
         .select("*")

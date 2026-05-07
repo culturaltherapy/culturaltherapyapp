@@ -85,8 +85,9 @@ export default function Onboarding() {
       if (supa) {
         const { data: { session } } = await supa.auth.getSession();
         if (session) {
-          // Save profile
-          await supa.from("profiles").update({
+          // Upsert so it works whether or not the trigger created the row
+          const { error: profileError } = await supa.from("profiles").upsert({
+            id: session.user.id,
             alias: s.alias.trim(),
             pronouns: s.pronouns || null,
             descent: s.descent,
@@ -99,7 +100,9 @@ export default function Onboarding() {
             id_verified: true,
             accepts_tribe_requests: true,
             accepts_dms: true
-          }).eq("id", session.user.id);
+          }, { onConflict: "id" });
+
+          if (profileError) console.error("Profile save error:", profileError.message);
 
           // Save prompts
           const filledPrompts = s.prompts.filter((p) => p.answer.trim());
@@ -113,10 +116,13 @@ export default function Onboarding() {
               }))
             );
           }
+        } else {
+          // No session — stash to localStorage so they can save after confirming email
+          localStorage.setItem("ct_pending_profile", JSON.stringify(s));
         }
       }
-    } catch (_) {
-      // Non-fatal — user can complete profile later
+    } catch (e: any) {
+      console.error("Onboarding finish error:", e?.message);
     } finally {
       setSaving(false);
       router.push("/home");

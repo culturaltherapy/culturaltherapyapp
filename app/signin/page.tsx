@@ -59,8 +59,14 @@ export default function SignInPage() {
         if (error) throw error;
         router.push("/home");
       } else if (mode === "signup") {
-        const { error } = await supa.auth.signUp({ email, password });
+        const { data, error } = await supa.auth.signUp({ email, password });
         if (error) throw error;
+        // If session is null, Supabase requires email confirmation first
+        if (!data.session) {
+          setMsg("Check your inbox — confirm your email, then sign in.");
+          setBusy(false);
+          return;
+        }
         router.push("/onboarding");
       } else if (mode === "magic") {
         const { error } = await supa.auth.signInWithOtp({
