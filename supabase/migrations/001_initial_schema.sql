@@ -1,6 +1,5 @@
 -- Cultural Therapy — Initial Schema
 -- Run this in the Supabase SQL editor (Dashboard → SQL Editor → New query)
--- or via: supabase db push
 
 -- ============================================================
 -- ENUMS
@@ -22,13 +21,13 @@ create type target_kind as enum ('profile', 'post', 'comment', 'message', 'threa
 create table profiles (
   id uuid primary key references auth.users on delete cascade,
   alias text not null check (char_length(alias) between 2 and 24),
-  full_name text,                       -- NEVER returned to other users
+  full_name text,
   avatar_url text,
   bio text,
   pronouns text,
   city text,
   country text,
-  lat double precision,                 -- coarse, rounded to 0.1°
+  lat double precision,
   lng double precision,
   descent text[] default '{}',
   languages text[] default '{}',
@@ -72,7 +71,7 @@ create table media (
   kind media_kind not null,
   url text not null,
   thumb_url text,
-  caption text not null,               -- mandatory
+  caption text not null,
   duration_s int,
   width int,
   height int,
@@ -150,7 +149,7 @@ create table posts (
   owner_id uuid not null references profiles on delete cascade,
   body text,
   visibility visibility not null default 'tribe',
-  village_id uuid references tribes,   -- when visibility = 'village'
+  village_id uuid references tribes,
   created_at timestamptz default now(),
   edited_at timestamptz
 );
@@ -342,106 +341,157 @@ alter table crisis_resources enable row level security;
 alter table audit_log enable row level security;
 
 -- ── Profiles ─────────────────────────────────────────────────
--- Everyone can read public fields. Only owner updates their own row.
 create policy "profiles: authenticated can read"
   on profiles for select to authenticated using (true);
 
 create policy "profiles: owner can update"
-  on profiles for update to authenticated using (auth.uid() = id);
+  on profiles for update to authenticated
+  using (auth.uid() = profiles.id);
 
 create policy "profiles: created on signup"
-  on profiles for insert with check (auth.uid() = id);
+  on profiles for insert with check (auth.uid() = profiles.id);
 
 -- ── Profile prompts ──────────────────────────────────────────
 create policy "prompts: owner all"
-  on profile_prompts for all to authenticated using (auth.uid() = user_id);
+  on profile_prompts for all to authenticated
+  using (auth.uid() = profile_prompts.user_id);
 
 create policy "prompts: public visible"
   on profile_prompts for select to authenticated
-  using (visibility = 'public');
+  using (profile_prompts.visibility = 'public');
 
+-- Tribe visibility: caller shares at least one tribe with the prompt owner
 create policy "prompts: tribe visible to co-member"
   on profile_prompts for select to authenticated
   using (
-    visibility = 'tribe' and
-    exists (
-      select 1 from tribe_members tm1
+    profile_prompts.visibility = 'tribe'
+    and exists (
+      select 1
+      from tribe_members tm1
       join tribe_members tm2 on tm1.tribe_id = tm2.tribe_id
       where tm1.user_id = auth.uid()
-        and tm2.user_id = user_id
+        and tm2.user_id = profile_prompts.user_id
     )
   );
 
 -- ── Posts ─────────────────────────────────────────────────────
 create policy "posts: owner all"
-  on posts for all to authenticated using (auth.uid() = owner_id);
+  on posts for all to authenticated
+  using (auth.uid() = posts.owner_id);
 
 create policy "posts: public to authenticated"
-  on posts for select to authenticated using (visibility = 'public');
+  on posts for select to authenticated
+  using (posts.visibility = 'public');
 
 create policy "posts: tribe to co-member"
   on posts for select to authenticated
   using (
-    visibility = 'tribe' and
-    exists (
-      select 1 from tribe_members tm1
+    posts.visibility = 'tribe'
+    and exists (
+      select 1
+      from tribe_members tm1
       join tribe_members tm2 on tm1.tribe_id = tm2.tribe_id
       where tm1.user_id = auth.uid()
-        and tm2.user_id = owner_id
+        and tm2.user_id = posts.owner_id
     )
   );
 
 create policy "posts: village to tribe member"
   on posts for select to authenticated
   using (
-    visibility = 'village' and
-    exists (
-      select 1 from tribe_members
-      where tribe_id = village_id and user_id = auth.uid()
+    posts.visibility = 'village'
+    and exists (
+      select 1 from tribe_members tm
+      where tm.tribe_id = posts.village_id
+        and tm.user_id = auth.uid()
     )
   );
 
 -- ── Tribes ──────────────────────────────────────────────────
+create policy "tribes: authenticated can create"
+  on tribes for insert to authenticated
+  with check (auth.uid() = tribes.owner_id);
+
+create policy "tribes: owner all"
+  on tribes for all to authenticated
+  using (auth.uid() = tribes.owner_id);
+
 create policy "tribes: members can read"
   on tribes for select to authenticated
   using (
     exists (
-      select 1 from tribe_members
-      where tribe_id = id and user_id = auth.uid()
+      select 1 from tribe_members tm
+      where tm.tribe_id = tribes.id
+        and tm.user_id = auth.uid()
     )
   );
 
-create policy "tribes: owner all"
-  on tribes for all to authenticated using (auth.uid() = owner_id);
-
-create policy "tribes: authenticated can create"
-  on tribes for insert to authenticated with check (auth.uid() = owner_id);
-
 -- ── Tribe members ───────────────────────────────────────────
-create policy "tribe_members: member can read own tribe"
+create policy "tribe_members: own row readable"
   on tribe_members for select to authenticated
-  using (user_id = auth.uid() or exists (
-    select 1 from tribe_members tm
-    where tm.tribe_id = tribe_id and tm.user_id = auth.uid()
-  ));
+  using (tribe_members.user_id = auth.uid());
 
--- ── Village threads + messages ───────────────────────────────
+create policy "tribe_members: co-members readable"
+  on tribe_members for select to authenticated
+  using (
+    exists (
+      select 1 from tribe_members tm
+      where tm.tribe_id = tribe_members.tribe_id
+        and tm.user_id = auth.uid()
+    )
+  );
+
+-- ── Tribe requests ──────────────────────────────────────────
+create policy "tribe_requests: requester can insert"
+  on tribe_requests for insert to authenticated
+  with check (auth.uid() = tribe_requests.requester_id);
+
+create policy "tribe_requests: requester can read own"
+  on tribe_requests for select to authenticated
+  using (auth.uid() = tribe_requests.requester_id);
+
+create policy "tribe_requests: tribe owner can manage"
+  on tribe_requests for all to authenticated
+  using (
+    exists (
+      select 1 from tribes t
+      where t.id = tribe_requests.tribe_id
+        and t.owner_id = auth.uid()
+    )
+  );
+
+-- ── Village threads ──────────────────────────────────────────
 create policy "village_threads: tribe members only"
   on village_threads for all to authenticated
   using (
     exists (
-      select 1 from tribe_members
-      where tribe_id = village_threads.tribe_id and user_id = auth.uid()
+      select 1 from tribe_members tm
+      where tm.tribe_id = village_threads.tribe_id
+        and tm.user_id = auth.uid()
     )
   );
 
+-- ── Village messages ─────────────────────────────────────────
 create policy "village_messages: thread tribe members"
   on village_messages for all to authenticated
   using (
     exists (
-      select 1 from village_threads vt
+      select 1
+      from village_threads vt
       join tribe_members tm on tm.tribe_id = vt.tribe_id
-      where vt.id = thread_id and tm.user_id = auth.uid()
+      where vt.id = village_messages.thread_id
+        and tm.user_id = auth.uid()
+    )
+  );
+
+-- ── Audio rooms ──────────────────────────────────────────────
+create policy "audio_rooms: tribe members can read"
+  on audio_rooms for select to authenticated
+  using (
+    exists (
+      select 1 from tribe_members tm
+      where tm.tribe_id = audio_rooms.tribe_id
+        and tm.user_id = auth.uid()
     )
   );
 
@@ -454,50 +504,77 @@ create policy "discussion_posts: authenticated read"
 
 create policy "discussion_posts: authenticated insert"
   on discussion_posts for insert to authenticated
-  with check (auth.uid() = author_id);
+  with check (auth.uid() = discussion_posts.author_id);
+
+create policy "discussion_posts: author can update/delete"
+  on discussion_posts for all to authenticated
+  using (auth.uid() = discussion_posts.author_id);
 
 create policy "discussion_replies: authenticated read"
   on discussion_replies for select to authenticated using (true);
 
 create policy "discussion_replies: authenticated insert"
   on discussion_replies for insert to authenticated
-  with check (auth.uid() = author_id);
+  with check (auth.uid() = discussion_replies.author_id);
+
+-- ── Post interactions ────────────────────────────────────────
+create policy "post_comments: author all"
+  on post_comments for all to authenticated
+  using (auth.uid() = post_comments.author_id);
+
+create policy "post_comments: visible if post visible"
+  on post_comments for select to authenticated using (true);
+
+create policy "post_likes: own row"
+  on post_likes for all to authenticated
+  using (auth.uid() = post_likes.user_id);
+
+create policy "post_media: readable with post"
+  on post_media for select to authenticated using (true);
+
+-- ── Media ────────────────────────────────────────────────────
+create policy "media: owner all"
+  on media for all to authenticated
+  using (auth.uid() = media.owner_id);
+
+create policy "media: authenticated can read"
+  on media for select to authenticated using (true);
 
 -- ── Academy ──────────────────────────────────────────────────
-create policy "courses: published readable by all"
-  on courses for select to authenticated using (published = true);
+create policy "courses: published readable"
+  on courses for select to authenticated
+  using (courses.published = true);
 
 create policy "modules: readable by authenticated"
-  on modules for select to authenticated using (
-    exists (select 1 from courses where id = course_id and published = true)
-  );
+  on modules for select to authenticated using (true);
 
 create policy "lessons: readable by authenticated"
   on lessons for select to authenticated using (true);
 
 create policy "enrollments: own row"
-  on enrollments for all to authenticated using (user_id = auth.uid());
+  on enrollments for all to authenticated
+  using (auth.uid() = enrollments.user_id);
 
 create policy "lesson_progress: own row"
-  on lesson_progress for all to authenticated using (user_id = auth.uid());
+  on lesson_progress for all to authenticated
+  using (auth.uid() = lesson_progress.user_id);
 
 -- ── Mod reports ──────────────────────────────────────────────
 create policy "mod_reports: anyone can insert"
   on mod_reports for insert to authenticated
-  with check (auth.uid() = reporter_id);
-
--- Mod-only SELECT is enforced in the Edge Function / API route
+  with check (auth.uid() = mod_reports.reporter_id);
 
 -- ── Crisis resources ─────────────────────────────────────────
 create policy "crisis_resources: public"
   on crisis_resources for select using (true);
 
 -- ── Audit log ────────────────────────────────────────────────
-create policy "audit_log: service role only"
-  on audit_log for all using (false);  -- overridden by service role JWT in Edge Functions
+-- Only service role (Edge Functions / API routes) can write; no client reads
+create policy "audit_log: no client access"
+  on audit_log for all using (false);
 
 -- ============================================================
--- TRIGGER: auto-create profile on signup
+-- TRIGGER: auto-create profile row on signup
 -- ============================================================
 
 create or replace function public.handle_new_user()
@@ -509,12 +586,17 @@ begin
   insert into public.profiles (id, alias)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'alias', split_part(new.email, '@', 1))
-  );
+    coalesce(
+      new.raw_user_meta_data->>'alias',
+      split_part(new.email, '@', 1)
+    )
+  )
+  on conflict (id) do nothing;
   return new;
 end;
 $$;
 
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
@@ -523,6 +605,27 @@ create trigger on_auth_user_created
 -- REALTIME: enable for live surfaces
 -- ============================================================
 
-alter publication supabase_realtime add table village_messages;
-alter publication supabase_realtime add table discussion_posts;
-alter publication supabase_realtime add table discussion_replies;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and tablename = 'village_messages'
+  ) then
+    alter publication supabase_realtime add table village_messages;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and tablename = 'discussion_posts'
+  ) then
+    alter publication supabase_realtime add table discussion_posts;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and tablename = 'discussion_replies'
+  ) then
+    alter publication supabase_realtime add table discussion_replies;
+  end if;
+end $$;
