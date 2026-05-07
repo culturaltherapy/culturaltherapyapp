@@ -1,15 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { discussionRooms, discussionThreads } from "@/lib/mock-data";
+import { useDiscussionRooms, useDiscussionPosts, usePostToDiscussion } from "@/lib/hooks/useDiscussions";
 import { Button } from "@/components/ui/Button";
 import { Funtunfunefu } from "@/components/motifs/Motifs";
 import { Icon } from "@/components/ui/Icon";
 
 export default function DiscussionsPage() {
-  const [activeRoom, setActiveRoom] = React.useState(discussionRooms[0].id);
-  const room = discussionRooms.find((r) => r.id === activeRoom)!;
-  const threads = discussionThreads.filter((t) => t.roomId === activeRoom);
+  const { data: rooms = [], isLoading: roomsLoading } = useDiscussionRooms();
+  const [activeRoomId, setActiveRoomId] = React.useState<string | null>(null);
+
+  const roomId = activeRoomId ?? rooms[0]?.id ?? "";
+  const room = rooms.find((r) => r.id === roomId) ?? rooms[0];
+  const { data: threads = [] } = useDiscussionPosts(roomId);
 
   return (
     <div>
@@ -24,71 +27,70 @@ export default function DiscussionsPage() {
       </header>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[300px_1fr]">
-        {/* Rooms */}
         <aside className="surface p-3">
           <p className="eyebrow px-2 pt-1">Rooms</p>
-          <ul className="mt-2 space-y-1">
-            {discussionRooms.map((r) => {
-              const active = r.id === activeRoom;
-              return (
-                <li key={r.id}>
-                  <button
-                    onClick={() => setActiveRoom(r.id)}
-                    className={`w-full text-left p-2.5 rounded-md flex items-start justify-between gap-2 ${
-                      active ? "bg-bone shadow-soft border border-line" : "hover:bg-ink/[.03]"
-                    }`}
-                  >
-                    <div>
-                      <div className="font-medium text-ink flex items-center gap-2">
-                        {r.title}
-                        {r.isChat && <span className="text-[10px] font-mono bg-crisis text-bone rounded-pill px-2 py-0.5">LIVE</span>}
+          {roomsLoading ? (
+            <div className="px-2 py-4 text-sm text-ink3">Loading rooms…</div>
+          ) : (
+            <ul className="mt-2 space-y-1">
+              {rooms.map((r) => {
+                const active = r.id === roomId;
+                return (
+                  <li key={r.id}>
+                    <button onClick={() => setActiveRoomId(r.id)}
+                      className={`w-full text-left p-2.5 rounded-md flex items-start justify-between gap-2 ${active ? "bg-bone shadow-soft border border-line" : "hover:bg-ink/[.03]"}`}>
+                      <div>
+                        <div className="font-medium text-ink flex items-center gap-2">
+                          {r.title}
+                          {r.isChat && <span className="text-[10px] font-mono bg-crisis text-bone rounded-pill px-2 py-0.5">LIVE</span>}
+                        </div>
+                        <p className="text-xs text-ink3 mt-0.5">{r.blurb}</p>
                       </div>
-                      <p className="text-xs text-ink3 mt-0.5">{r.blurb}</p>
-                    </div>
-                    <span className="text-[11px] text-ink3 font-mono whitespace-nowrap">{r.count}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                      <span className="text-[11px] text-ink3 font-mono whitespace-nowrap">{r.count || ""}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </aside>
 
-        {/* Threads */}
         <section>
-          <div className="flex items-baseline justify-between gap-3">
-            <div>
-              <h2 className="font-display text-2xl">{room.title}</h2>
-              <p className="text-ink3 text-sm">{room.blurb}</p>
-            </div>
-            <Button>+ Start a thread</Button>
-          </div>
+          {room && (
+            <>
+              <div className="flex items-baseline justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-2xl">{room.title}</h2>
+                  <p className="text-ink3 text-sm">{room.blurb}</p>
+                </div>
+                <Button>+ Start a thread</Button>
+              </div>
 
-          {room.isChat ? (
-            <ChatRoom />
-          ) : (
-            <ul className="mt-5 surface divide-y divide-line">
-              {threads.map((t) => (
-                <li key={t.id} className="px-4 py-3 hover:bg-ink/[.02]">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <h3 className="font-display text-lg">{t.title}</h3>
-                    <span className="text-xs text-ink3 whitespace-nowrap">{t.last}</span>
-                  </div>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-ink3">
-                    <span>{t.replies} replies</span>
-                    <span>·</span>
-                    <span>Room: {room.title}</span>
-                    <span className="ml-auto inline-flex gap-1.5">
-                      <span className="h-5 w-5 rounded-full bg-terracotta" />
-                      <span className="h-5 w-5 rounded-full bg-forest" />
-                      <span className="h-5 w-5 rounded-full bg-ochre" />
-                    </span>
-                  </div>
-                </li>
-              ))}
-              {threads.length === 0 && (
-                <li className="px-4 py-6 text-center text-ink3 text-sm">No threads yet — start the first one.</li>
+              {room.isChat ? (
+                <ChatRoom roomId={room.id} />
+              ) : (
+                <ul className="mt-5 surface divide-y divide-line">
+                  {threads.map((t) => (
+                    <li key={t.id} className="px-4 py-3 hover:bg-ink/[.02] cursor-pointer">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <h3 className="font-display text-lg">{t.title}</h3>
+                        <span className="text-xs text-ink3 whitespace-nowrap">{t.last}</span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-3 text-xs text-ink3">
+                        <span>{t.replies} replies</span>
+                        <span>·</span>
+                        <span>Room: {room.title}</span>
+                      </div>
+                    </li>
+                  ))}
+                  {threads.length === 0 && (
+                    <li className="px-4 py-6 text-center text-ink3 text-sm">
+                      No threads yet — start the first one.
+                    </li>
+                  )}
+                </ul>
               )}
-            </ul>
+            </>
           )}
 
           <div className="mt-6 flex items-center gap-3 text-ink3">
@@ -101,18 +103,33 @@ export default function DiscussionsPage() {
   );
 }
 
-function ChatRoom() {
+function ChatRoom({ roomId }: { roomId: string }) {
+  const { data: serverPosts = [] } = useDiscussionPosts(roomId);
+  const postMutation = usePostToDiscussion();
   const [msgs, setMsgs] = React.useState([
-    { id: "m1", who: "Adwoa K.", text: "Just finished therapy — it was a lot.", t: "2m" },
-    { id: "m2", who: "Marcus O.", text: "Proud of you. What helped?", t: "1m" },
-    { id: "m3", who: "Tendai R.", text: "Take a breath. We're here.", t: "30s" }
+    { id: "seed1", who: "Adwoa K.", text: "Just finished therapy — it was a lot.", t: "2m" },
+    { id: "seed2", who: "Marcus O.", text: "Proud of you. What helped?", t: "1m" },
+    { id: "seed3", who: "Tendai R.", text: "Take a breath. We're here.", t: "30s" }
   ]);
   const [text, setText] = React.useState("");
-  function send() {
+  const bottomRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs]);
+
+  async function send() {
     if (!text.trim()) return;
-    setMsgs([...msgs, { id: String(Date.now()), who: "You", text, t: "now" }]);
+    const optimistic = { id: String(Date.now()), who: "You", text, t: "now" };
+    setMsgs((m) => [...m, optimistic]);
     setText("");
+    try {
+      await postMutation.mutateAsync({ roomId, body: text.trim() });
+    } catch (_) {
+      // optimistic update stays visible
+    }
   }
+
   return (
     <div className="mt-5 surface p-4 flex flex-col h-[60dvh] min-h-[400px]">
       <ul className="flex-1 overflow-y-auto space-y-3 pr-1">
@@ -125,16 +142,15 @@ function ChatRoom() {
             <p className="text-[15px] text-ink2">{m.text}</p>
           </li>
         ))}
+        <div ref={bottomRef} />
       </ul>
       <div className="mt-3 flex items-center gap-2 border-t border-line pt-3">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+        <input value={text} onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
           placeholder="Say something kind."
           className="flex-1 bg-transparent border-0 outline-none text-[15px]"
-        />
-        <Button size="sm" onClick={send}>Send</Button>
+          enterKeyHint="send" />
+        <Button size="sm" onClick={send} disabled={postMutation.isPending}>Send</Button>
       </div>
     </div>
   );

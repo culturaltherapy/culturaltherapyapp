@@ -3,15 +3,21 @@ import * as React from "react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Ankh } from "@/components/motifs/Motifs";
-import { crisisResources } from "@/lib/mock-data";
 import { Icon } from "@/components/ui/Icon";
+import { useCrisisResources } from "@/lib/hooks/useCrisisResources";
 
-type Country = keyof typeof crisisResources;
+const COUNTRIES = [
+  { code: "GB", label: "United Kingdom" },
+  { code: "US", label: "United States" },
+  { code: "NG", label: "Nigeria" },
+  { code: "GH", label: "Ghana" },
+  { code: "CA", label: "Canada" },
+];
 
 export function CrisisBanner() {
   const [open, setOpen] = React.useState(false);
-  const [country, setCountry] = React.useState<Country>("GB");
-  const list = crisisResources[country];
+  const [country, setCountry] = React.useState("GB");
+  const { data: list = [] } = useCrisisResources(country);
 
   return (
     <>
@@ -64,14 +70,12 @@ export function CrisisBanner() {
           <label className="text-sm text-ink3">Country</label>
           <select
             value={country}
-            onChange={(e) => setCountry(e.target.value as Country)}
+            onChange={(e) => setCountry(e.target.value)}
             className="mt-1 w-full rounded-md border border-line bg-bone px-3 py-2 text-sm"
           >
-            <option value="GB">United Kingdom</option>
-            <option value="US">United States</option>
-            <option value="NG">Nigeria</option>
-            <option value="GH">Ghana</option>
-            <option value="CA">Canada</option>
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.label}</option>
+            ))}
           </select>
         </div>
 

@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { profiles } from "@/lib/mock-data";
+import { useProfile } from "@/lib/hooks/useProfile";
+import { profiles as mockProfiles } from "@/lib/mock-data";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
@@ -12,7 +13,25 @@ import { Icon } from "@/components/ui/Icon";
 
 export default function ViewProfile() {
   const params = useParams<{ id: string }>();
-  const p = profiles.find((x) => x.id === params.id) ?? profiles[0];
+  const { data: profile, isLoading } = useProfile(params.id);
+
+  const fallback = mockProfiles.find((x) => x.id === params.id) ?? mockProfiles[0];
+  const p = profile ?? fallback;
+  const alias = (p as any).alias ?? "Member";
+  const city = (p as any).city ?? "";
+  const country = (p as any).country ?? "";
+  const descent = (p as any).descent ?? [];
+  const tags = (p as any).experience_tags ?? (p as any).experienceTags ?? [];
+  const verified = (p as any).id_verified ?? (p as any).idVerified ?? false;
+  const avatarColor = (p as any).avatar_color ?? (p as any).avatarColor ?? "#b3563a";
+  const matchPct = (p as any).matchPct ?? null;
+  const distanceKm = (p as any).distanceKm ?? null;
+  const prompt = (p as any).prompt ?? null;
+
+  if (isLoading) {
+    return <div className="flex justify-center py-20"><div className="h-6 w-6 rounded-full border-2 border-terracotta border-t-transparent animate-spin" /></div>;
+  }
+
   return (
     <div>
       <Link href="/network" className="text-sm text-ink3 hover:text-ink inline-flex items-center gap-1.5">
@@ -23,16 +42,19 @@ export default function ViewProfile() {
           <EyeOfHorus size={220} />
         </div>
         <div className="relative flex flex-col sm:flex-row gap-5 sm:items-end">
-          <Avatar name={p.alias} color={p.avatarColor} size={96} />
+          <Avatar name={alias} color={avatarColor} size={96} />
           <div className="flex-1">
-            <p className="eyebrow">{p.matchPct}% match · {p.distanceKm} km away</p>
-            <h1 className="font-display text-4xl mt-1 leading-tight">{p.alias}</h1>
-            <p className="text-ink2 mt-1">{p.city}, {p.country} · {p.descent.join(" · ")}</p>
+            <p className="eyebrow">
+              {matchPct != null ? `${matchPct}% match · ` : ""}
+              {distanceKm != null ? `${distanceKm} km away` : ""}
+            </p>
+            <h1 className="font-display text-4xl mt-1 leading-tight">{alias}</h1>
+            <p className="text-ink2 mt-1">{city}, {country} · {Array.isArray(descent) ? descent.join(" · ") : descent}</p>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {p.experienceTags.map((t) => (
+              {(Array.isArray(tags) ? tags : []).map((t: string) => (
                 <Chip key={t}>{t}</Chip>
               ))}
-              {p.idVerified && <Chip className="border-forest text-forest">ID verified</Chip>}
+              {verified && <Chip className="border-forest text-forest">ID verified</Chip>}
             </div>
           </div>
           <div className="flex gap-2">
@@ -43,10 +65,12 @@ export default function ViewProfile() {
       </section>
 
       <section className="mt-6 grid lg:grid-cols-[1fr_320px] gap-6">
-        <div className="surface p-6">
-          <p className="eyebrow">{p.prompt.question}</p>
-          <p className="font-display text-2xl mt-2 leading-snug">"{p.prompt.answer}"</p>
-        </div>
+        {prompt?.answer && (
+          <div className="surface p-6">
+            <p className="eyebrow">{prompt.question}</p>
+            <p className="font-display text-2xl mt-2 leading-snug">"{prompt.answer}"</p>
+          </div>
+        )}
         <aside className="surface p-5">
           <h3 className="font-display text-lg">Open to</h3>
           <ul className="mt-2 text-sm text-ink2 space-y-1">

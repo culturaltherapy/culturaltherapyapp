@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 import { me } from "@/lib/mock-data";
+import { useSession } from "@/lib/hooks/useSession";
 
 const navItems = [
   { href: "/home", label: "Home" },
@@ -18,6 +19,9 @@ const navItems = [
 
 export function TopNav() {
   const pathname = usePathname();
+  const { profile } = useSession();
+  const alias = profile?.alias ?? me.alias;
+  const avatarColor = (profile as any)?.avatar_color ?? me.avatarColor;
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-parchment/85 backdrop-blur supports-[backdrop-filter]:bg-parchment/70">
@@ -61,7 +65,7 @@ export function TopNav() {
             <Icon name="bell" size={20} />
           </button>
           <Link href="/profile" aria-label="My profile">
-            <Avatar name={me.alias} color={me.avatarColor} size={36} />
+            <Avatar name={alias} color={avatarColor} size={36} />
           </Link>
         </div>
       </div>

@@ -1,33 +1,50 @@
+"use client";
+
 import Link from "next/link";
 import { me, wallPosts } from "@/lib/mock-data";
+import { useSession } from "@/lib/hooks/useSession";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { EyeOfHorus } from "@/components/motifs/Motifs";
 import { timeAgo } from "@/lib/utils";
 
-// "My profile — what others see" — public-style view of yourself.
 export default function MyPublicProfile() {
+  const { profile, loading } = useSession();
+
+  const alias = profile?.alias ?? me.alias;
+  const city = profile?.city ?? me.city;
+  const country = profile?.country ?? me.country;
+  const descent = (profile as any)?.descent ?? me.descent;
+  const tags = profile?.experience_tags ?? me.experienceTags;
+  const verified = (profile as any)?.id_verified ?? me.idVerified;
+  const avatarColor = (profile as any)?.avatar_color ?? me.avatarColor;
+  const prompts = (profile as any)?.prompts ?? [me.prompt];
+  const firstPrompt = Array.isArray(prompts) ? prompts[0] : me.prompt;
+
+  if (loading) {
+    return <div className="flex justify-center py-20"><div className="h-6 w-6 rounded-full border-2 border-terracotta border-t-transparent animate-spin" /></div>;
+  }
+
   return (
     <div>
-      {/* Hero */}
       <section className="surface p-6 sm:p-8 relative overflow-hidden">
         <div className="absolute -top-8 -right-8 opacity-10 text-terracotta">
           <EyeOfHorus size={220} />
         </div>
         <div className="relative flex flex-col sm:flex-row gap-5 sm:items-end">
-          <Avatar name={me.alias} color={me.avatarColor} size={96} />
+          <Avatar name={alias} color={avatarColor} size={96} />
           <div className="flex-1">
             <p className="eyebrow">My profile · what others see</p>
-            <h1 className="font-display text-4xl mt-1 leading-tight">{me.alias}</h1>
+            <h1 className="font-display text-4xl mt-1 leading-tight">{alias}</h1>
             <p className="text-ink2 mt-1">
-              {me.city}, {me.country} · {me.descent.join(" · ")}
+              {city}, {country} · {Array.isArray(descent) ? descent.join(" · ") : descent}
             </p>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {me.experienceTags.map((t) => (
+              {(Array.isArray(tags) ? tags : []).map((t: string) => (
                 <Chip key={t}>{t}</Chip>
               ))}
-              {me.idVerified && <Chip className="border-forest text-forest">ID verified</Chip>}
+              {verified && <Chip className="border-forest text-forest">ID verified</Chip>}
             </div>
           </div>
           <div className="flex gap-2">
@@ -38,7 +55,6 @@ export default function MyPublicProfile() {
       </section>
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-6 mt-6">
-        {/* Wall */}
         <section>
           <header className="flex items-baseline justify-between">
             <h2 className="font-display text-2xl">Wall</h2>
@@ -61,15 +77,18 @@ export default function MyPublicProfile() {
           </ul>
         </section>
 
-        {/* Sidebar prompts */}
         <aside className="space-y-5">
-          <div className="surface p-5">
-            <p className="eyebrow">{me.prompt.question}</p>
-            <p className="font-display text-xl mt-1 italic leading-snug">"{me.prompt.answer}"</p>
-          </div>
+          {firstPrompt && (
+            <div className="surface p-5">
+              <p className="eyebrow">{firstPrompt.question}</p>
+              <p className="font-display text-xl mt-1 italic leading-snug">"{firstPrompt.answer}"</p>
+            </div>
+          )}
           <div className="surface p-5">
             <h3 className="font-display text-lg">Languages</h3>
-            <p className="text-ink2 mt-1 text-sm">English · Twi</p>
+            <p className="text-ink2 mt-1 text-sm">
+              {Array.isArray((profile as any)?.languages) ? (profile as any).languages.join(" · ") : "English"}
+            </p>
           </div>
           <div className="surface p-5">
             <h3 className="font-display text-lg">Open to</h3>
