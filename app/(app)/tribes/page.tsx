@@ -167,6 +167,8 @@ export default function TribesPage() {
           <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {discover.map((t: any) => {
               const pending = outbox.some((r: any) => r.tribe_id === t.id);
+              const isThisOneBeingSent =
+                sendRequest.isPending && sendRequest.variables?.tribeId === t.id;
               return (
                 <li key={t.id} className="surface overflow-hidden">
                   <Link
@@ -175,7 +177,7 @@ export default function TribesPage() {
                     style={{ background: t.color ?? "#2f4a32" }}
                   >
                     <div className="absolute -bottom-6 -right-6 opacity-25">
-                      <Motif name={(t.motif ?? "Ubuntu") as any} size={120} />
+                      <Motif name={t.motif ?? "ubuntu"} size={120} />
                     </div>
                     <div className="relative">
                       <h3 className="font-display text-xl leading-tight">{t.name}</h3>
@@ -184,7 +186,7 @@ export default function TribesPage() {
                   </Link>
                   <div className="p-3 flex justify-end">
                     {pending ? (
-                      <span className="text-xs font-mono text-ink3 uppercase">Request sent</span>
+                      <span className="text-xs font-mono text-forest uppercase">✓ Request sent</span>
                     ) : (
                       <Button
                         size="sm"
@@ -192,7 +194,7 @@ export default function TribesPage() {
                         onClick={() => sendRequest.mutate({ tribeId: t.id })}
                         disabled={sendRequest.isPending}
                       >
-                        Request to join
+                        {isThisOneBeingSent ? "Sending…" : "Request to join"}
                       </Button>
                     )}
                   </div>
@@ -200,6 +202,11 @@ export default function TribesPage() {
               );
             })}
           </ul>
+          {sendRequest.isError && (
+            <p className="mt-3 text-sm text-crisis">
+              Couldn't send request: {(sendRequest.error as any)?.message ?? "Try again."}
+            </p>
+          )}
         </section>
       )}
 

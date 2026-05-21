@@ -116,11 +116,18 @@ export default function VillagePage() {
             Threads and audio rooms are visible to members only. Send a request to ask the founder to let you in.
           </p>
           {hasPendingRequest ? (
-            <p className="mt-3 text-sm text-ink3 font-mono uppercase">Request sent · awaiting response</p>
+            <p className="mt-3 text-sm text-forest font-mono uppercase">✓ Request sent · awaiting response</p>
           ) : (
-            <Button className="mt-4" onClick={requestToJoin} disabled={sendRequest.isPending}>
-              {sendRequest.isPending ? "Sending…" : "Request to join"}
-            </Button>
+            <>
+              <Button className="mt-4" onClick={requestToJoin} disabled={sendRequest.isPending}>
+                {sendRequest.isPending ? "Sending…" : "Request to join"}
+              </Button>
+              {sendRequest.isError && (
+                <p className="mt-3 text-sm text-crisis">
+                  Couldn't send request: {(sendRequest.error as any)?.message ?? "Try again."}
+                </p>
+              )}
+            </>
           )}
         </div>
       )}

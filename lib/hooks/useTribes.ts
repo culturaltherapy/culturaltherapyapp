@@ -39,13 +39,44 @@ export function useTribe(id: string) {
       const supa = getSupabaseBrowser();
       if (!supa) return mockTribes.find((t) => t.id === id) ?? mockTribes[0];
 
-      const { data } = await (supa as any)
+      // 1. Fetch the tribe itself. Use maybeSingle so 0 rows returns null
+      //    instead of erroring (which single() does).
+      const { data: tribe, error } = await (supa as any)
         .from("tribes")
-        .select("*, tribe_members(user_id, role, profiles(id, alias, avatar_url, avatar_color))")
+        .select("id, name, blurb, color, motif, owner_id, created_at")
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
-      return data ?? null;
+      if (error) console.error("useTribe error:", error.message);
+      if (!tribe) return null;
+
+      // 2. Fetch members separately so RLS on tribe_members doesn't break
+      //    the parent tribe load. Non-members will see empty here.
+      const { data: members } = await (supa as any)
+        .from("tribe_members")
+        .select("user_id, role")
+        .eq("tribe_id", id);
+
+      const memberIds: string[] = (members ?? []).map((m: any) => m.user_id);
+
+      // 3. Look up profiles for any member ids we can see.
+      let profiles: any[] = [];
+      if (memberIds.length > 0) {
+        const { data: profs } = await (supa as any)
+          .from("profiles")
+          .select("id, alias, avatar_url, avatar_color")
+          .in("id", memberIds);
+        profiles = profs ?? [];
+      }
+
+      const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
+      const tribe_members = (members ?? []).map((m: any) => ({
+        user_id: m.user_id,
+        role: m.role,
+        profiles: profileMap.get(m.user_id) ?? null,
+      }));
+
+      return { ...tribe, tribe_members };
     }
   });
 }
