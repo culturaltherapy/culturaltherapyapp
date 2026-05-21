@@ -121,21 +121,34 @@ export interface CrisisResource {
   hours: string | null;
 }
 
-// Minimal Database shape for the Supabase client generic
+// Supabase requires all four schema sections to be present for generics to resolve correctly.
+// Missing Views/Functions/Enums/CompositeTypes causes table Insert/Update types to collapse to `never`.
+type TableDef<Row, Insert = Partial<Row>, Update = Partial<Row>> = {
+  Row: Row;
+  Insert: Insert;
+  Update: Update;
+  Relationships: [];
+};
+
 export type Database = {
   public: {
     Tables: {
-      profiles: { Row: Profile; Insert: Partial<Profile> & { id: string; alias: string }; Update: Partial<Profile> };
-      tribes: { Row: Tribe; Insert: Partial<Tribe> & { name: string; owner_id: string }; Update: Partial<Tribe> };
-      tribe_members: { Row: TribeMember; Insert: TribeMember; Update: Partial<TribeMember> };
-      posts: { Row: Post; Insert: Partial<Post> & { owner_id: string; visibility: Visibility }; Update: Partial<Post> };
-      village_threads: { Row: VillageThread; Insert: Partial<VillageThread> & { tribe_id: string; author_id: string; title: string }; Update: Partial<VillageThread> };
-      village_messages: { Row: VillageMessage; Insert: Partial<VillageMessage> & { thread_id: string; author_id: string; body: string }; Update: Partial<VillageMessage> };
-      discussion_rooms: { Row: DiscussionRoom; Insert: Partial<DiscussionRoom> & { title: string }; Update: Partial<DiscussionRoom> };
-      discussion_posts: { Row: DiscussionPost; Insert: Partial<DiscussionPost> & { room_id: string; author_id: string }; Update: Partial<DiscussionPost> };
-      courses: { Row: Course; Insert: Partial<Course> & { title: string }; Update: Partial<Course> };
-      mod_reports: { Row: ModReport; Insert: Partial<ModReport> & { reporter_id: string; target_kind: string; target_id: string; reason: ReportReason }; Update: Partial<ModReport> };
-      crisis_resources: { Row: CrisisResource; Insert: Partial<CrisisResource> & { country_code: string; name: string }; Update: Partial<CrisisResource> };
+      profiles:         TableDef<Profile,       Partial<Profile>       & { id: string }>;
+      tribes:           TableDef<Tribe,          Partial<Tribe>         & { name: string; owner_id: string }>;
+      tribe_members:    TableDef<TribeMember,    TribeMember>;
+      posts:            TableDef<Post,           Partial<Post>          & { owner_id: string; visibility: Visibility }>;
+      village_threads:  TableDef<VillageThread,  Partial<VillageThread> & { tribe_id: string; author_id: string; title: string }>;
+      village_messages: TableDef<VillageMessage, Partial<VillageMessage>& { thread_id: string; author_id: string; body: string }>;
+      discussion_rooms: TableDef<DiscussionRoom, Partial<DiscussionRoom>& { title: string }>;
+      discussion_posts: TableDef<DiscussionPost, Partial<DiscussionPost>& { room_id: string; author_id: string }>;
+      profile_prompts:  TableDef<{ id: string; user_id: string; prompt_id: string; answer: string; visibility: Visibility }, { user_id: string; prompt_id: string; answer: string; visibility: Visibility }>;
+      courses:          TableDef<Course,         Partial<Course>        & { title: string }>;
+      mod_reports:      TableDef<ModReport,      Partial<ModReport>     & { reporter_id: string; target_kind: string; target_id: string; reason: ReportReason }>;
+      crisis_resources: TableDef<CrisisResource, Partial<CrisisResource>& { country_code: string; name: string }>;
     };
+    Views:          Record<string, never>;
+    Functions:      Record<string, never>;
+    Enums:          Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 };

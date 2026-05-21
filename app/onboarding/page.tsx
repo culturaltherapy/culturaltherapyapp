@@ -30,7 +30,8 @@ type State = {
   cocAccepted: boolean;
 };
 
-// Step map (11 steps)
+// Step map:
+// 0  Create account (email/password or Google — skipped if already signed in)
 // 1  Welcome
 // 2  Identity (alias / pronouns)
 // 3  Roots (descent / languages)
@@ -46,7 +47,8 @@ const TOTAL = 11;
 
 export default function Onboarding() {
   const router = useRouter();
-  const [step, setStep] = React.useState(1);
+  // Step 0 = account creation gate; 1–11 = profile steps
+  const [step, setStep] = React.useState(0);
   const [saving, setSaving] = React.useState(false);
   const [saveErr, setSaveErr] = React.useState<string | null>(null);
   const [s, setS] = React.useState<State>({
@@ -71,11 +73,21 @@ export default function Onboarding() {
     setS((prev) => ({ ...prev, ...p }));
   }
 
+  // If already signed in, skip the account-creation gate
+  React.useEffect(() => {
+    const supa = getSupabaseBrowser();
+    if (!supa) { setStep(1); return; }
+    supa.auth.getSession().then(({ data: { session } }) => {
+      if (session) setStep(1);
+    });
+  }, []);
+
   function next() { setStep((n) => Math.min(TOTAL, n + 1)); }
   function prev() { setStep((n) => Math.max(1, n - 1)); }
 
   const canContinue = React.useMemo(() => {
     switch (step) {
+      case 0:  return false; // step 0 navigates itself on auth success
       case 1:  return true;
       case 2:  return s.alias.trim().length >= 2;
       case 3:  return s.descent.length > 0;
@@ -159,16 +171,25 @@ export default function Onboarding() {
       <header className="border-b border-line">
         <div className="mx-auto max-w-2xl px-4 sm:px-6 py-4 flex items-center justify-between">
           <Link href="/"><Logo size={26} withWordmark={false} /></Link>
-          <div className="text-xs text-ink3 font-mono">Step {step} of {TOTAL}</div>
-          <Link href="/signin" className="text-sm text-ink3 hover:text-ink">Sign in</Link>
+          <div className="text-xs text-ink3 font-mono">
+            {step === 0 ? "Create account" : `Step ${step} of ${TOTAL}`}
+          </div>
+          {step === 0
+            ? <Link href="/signin" className="text-sm text-ink3 hover:text-ink">Sign in instead</Link>
+            : <div className="w-20" />
+          }
         </div>
         <div className="h-1 w-full bg-line">
-          <div className="h-1 bg-terracotta transition-all duration-300" style={{ width: `${(step / TOTAL) * 100}%` }} />
+          <div
+            className="h-1 bg-terracotta transition-all duration-300"
+            style={{ width: step === 0 ? "0%" : `${(step / TOTAL) * 100}%` }}
+          />
         </div>
       </header>
 
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">
         <div className="mx-auto max-w-2xl">
+          {step === 0  && <StepCreateAccount onSuccess={() => setStep(1)} />}
           {step === 1  && <StepWelcome />}
           {step === 2  && <StepIdentity s={s} patch={patch} />}
           {step === 3  && <StepRoots s={s} patch={patch} />}
@@ -183,29 +204,31 @@ export default function Onboarding() {
         </div>
       </main>
 
-      <footer
-        className="border-t border-line bg-parchment/95 sticky bottom-0"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      >
-        <div className="mx-auto max-w-2xl px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-          <button
-            onClick={prev}
-            disabled={step === 1}
-            className="text-sm text-ink2 disabled:text-ink3 inline-flex items-center gap-1"
-          >
-            <Icon name="arrowLeft" size={14} /> Back
-          </button>
-          {step < TOTAL ? (
-            <Button onClick={next} disabled={!canContinue} size="md">
-              Continue <Icon name="arrow" size={14} />
-            </Button>
-          ) : (
-            <Button onClick={finish} size="md" disabled={saving}>
-              {saving ? "Saving…" : "Enter the network"} <Icon name="arrow" size={14} />
-            </Button>
-          )}
-        </div>
-      </footer>
+      {step > 0 && (
+        <footer
+          className="border-t border-line bg-parchment/95 sticky bottom-0"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          <div className="mx-auto max-w-2xl px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+            <button
+              onClick={prev}
+              disabled={step === 1}
+              className="text-sm text-ink2 disabled:text-ink3 inline-flex items-center gap-1"
+            >
+              <Icon name="arrowLeft" size={14} /> Back
+            </button>
+            {step < TOTAL ? (
+              <Button onClick={next} disabled={!canContinue} size="md">
+                Continue <Icon name="arrow" size={14} />
+              </Button>
+            ) : (
+              <Button onClick={finish} size="md" disabled={saving}>
+                {saving ? "Saving…" : "Enter the network"} <Icon name="arrow" size={14} />
+              </Button>
+            )}
+          </div>
+        </footer>
+      )}
     </div>
   );
 }
@@ -219,6 +242,122 @@ function StepHeader({ kicker, title, body }: { kicker: string; title: string; bo
       <h1 className="font-display text-3xl sm:text-4xl mt-2 leading-tight">{title}</h1>
       {body && <p className="text-ink2 mt-2 max-w-prose">{body}</p>}
     </div>
+  );
+}
+
+function StepCreateAccount({ onSuccess }: { onSuccess: () => void }) {
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
+  const [msg, setMsg] = React.useState<string | null>(null);
+
+  async function handleEmail(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setErr(null);
+    const supa = getSupabaseBrowser();
+    if (!supa) { onSuccess(); return; }
+    try {
+      const { data, error } = await supa.auth.signUp({ email, password });
+      if (error) throw error;
+      if (!data.session) {
+        // Email confirmation required — Supabase is configured with confirmations on
+        setMsg("Check your inbox and confirm your email, then come back to continue.");
+        setBusy(false);
+        return;
+      }
+      onSuccess();
+    } catch (e: any) {
+      setErr(e?.message ?? "Something went wrong. Try again.");
+      setBusy(false);
+    }
+  }
+
+  async function handleGoogle() {
+    setBusy(true);
+    const supa = getSupabaseBrowser();
+    if (!supa) { onSuccess(); return; }
+    // Redirect back to /onboarding after OAuth so the flow continues
+    await supa.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`
+      }
+    });
+    // Page will navigate away — no need to setBusy(false)
+  }
+
+  return (
+    <div>
+      <div className="text-terracotta mb-4"><Sankofa size={48} /></div>
+      <p className="eyebrow">Join B.L.E.S.S</p>
+      <h1 className="font-display text-3xl sm:text-4xl mt-2 leading-tight">
+        Create your account first.
+      </h1>
+      <p className="text-ink2 mt-2">
+        Your real name stays private — we use an alias. Takes 30 seconds.
+      </p>
+
+      {/* Google */}
+      <button
+        onClick={handleGoogle}
+        disabled={busy}
+        className="mt-7 w-full inline-flex items-center justify-center gap-3 rounded-md border border-line bg-bone px-4 py-3 text-[15px] font-medium hover:bg-ink/5 disabled:opacity-50"
+      >
+        <GoogleIcon /> Continue with Google
+      </button>
+
+      <div className="mt-5 flex items-center gap-3 text-xs text-ink3">
+        <span className="flex-1 h-px bg-line" />or create with email<span className="flex-1 h-px bg-line" />
+      </div>
+
+      {/* Email form */}
+      <form onSubmit={handleEmail} className="mt-5 space-y-4">
+        <Field label="Email">
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            autoComplete="email"
+            required
+          />
+        </Field>
+        <Field label="Password" hint="At least 8 characters">
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Choose a strong password"
+            autoComplete="new-password"
+            minLength={8}
+            required
+          />
+        </Field>
+        {err && <p className="text-sm text-crisis">{err}</p>}
+        {msg && <p className="text-sm text-forest bg-forest/10 rounded-md px-3 py-2">{msg}</p>}
+        <Button type="submit" size="lg" full disabled={busy}>
+          {busy ? "Creating account…" : "Create account & continue →"}
+        </Button>
+      </form>
+
+      <p className="mt-4 text-xs text-ink3 text-center">
+        Already have an account?{" "}
+        <Link href="/signin" className="text-terracotta hover:underline">Sign in</Link>
+      </p>
+    </div>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
+      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
+      <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
+      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
+    </svg>
   );
 }
 

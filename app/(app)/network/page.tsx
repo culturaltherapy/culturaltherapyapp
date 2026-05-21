@@ -102,7 +102,7 @@ export default function NetworkPage() {
                   </div>
                 )}
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {p.experienceTags.slice(0, 3).map((t) => <Chip key={t}>{t}</Chip>)}
+                  {p.experienceTags.slice(0, 3).map((tag: string) => <Chip key={tag}>{tag}</Chip>)}
                 </div>
               </Link>
             </li>
