@@ -53,8 +53,13 @@ export default function ViewProfile() {
   const avatarUrl = (profile as any).avatar_url ?? null;
   const acceptsTribe = (profile as any).accepts_tribe_requests !== false;
   const acceptsDms = (profile as any).accepts_dms !== false;
+  const birthYear: number | null = (profile as any).birth_year ?? null;
+  const socialLinks: { platform: string; url: string }[] =
+    (profile as any).social_links ?? [];
+  const age = birthYear ? new Date().getFullYear() - birthYear : null;
 
   const locationLine = [
+    age ? `${age}` : null,
     [city, country].filter(Boolean).join(", "),
     descent.join(" · "),
   ].filter(Boolean).join(" · ");
@@ -130,6 +135,27 @@ export default function ViewProfile() {
             <div className="surface p-5">
               <h3 className="font-display text-lg">Languages</h3>
               <p className="text-ink2 mt-1 text-sm">{languages.join(" · ")}</p>
+            </div>
+          )}
+
+          {socialLinks.length > 0 && (
+            <div className="surface p-5">
+              <h3 className="font-display text-lg">Find them elsewhere</h3>
+              <ul className="mt-2 space-y-1.5 text-sm">
+                {socialLinks.map((l, i) => (
+                  <li key={i}>
+                    <a
+                      href={l.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-terracotta hover:underline inline-flex items-center gap-1.5 break-all"
+                    >
+                      <span className="capitalize text-ink3 text-xs font-mono">{l.platform}</span>
+                      <span>{l.url.replace(/^https?:\/\//, "")}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
           <div className="surface p-5">

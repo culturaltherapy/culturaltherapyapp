@@ -6,7 +6,12 @@ import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/hooks/useSession";
 import { useUserPrompts } from "@/lib/hooks/useMyPrompts";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { experienceTagPool, promptLibrary } from "@/lib/mock-data";
+import {
+  experienceTagPool,
+  promptLibrary,
+  LANGUAGE_OPTIONS,
+  SOCIAL_PLATFORMS,
+} from "@/lib/mock-data";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea, Select } from "@/components/ui/Field";
 import { Chip } from "@/components/ui/Chip";
@@ -20,17 +25,13 @@ type SectionKey =
   | "experience"
   | "diagnosis"
   | "prompts"
+  | "social"
   | "contact";
 
 const DESCENT_OPTIONS = [
   "Ghanaian", "Nigerian", "Jamaican", "Trinidadian", "Kenyan",
   "Zimbabwean", "South African", "Ethiopian", "Somali", "Sudanese",
   "Senegalese", "British", "American", "Brazilian", "Other"
-];
-
-const LANGUAGE_OPTIONS = [
-  "English", "Twi", "Yoruba", "Igbo", "Patois",
-  "Swahili", "French", "Portuguese", "Arabic", "Amharic"
 ];
 
 const COUNTRY_OPTIONS = [
@@ -109,7 +110,12 @@ export default function EditProfile() {
 
         <SectionCard
           title="Identity"
-          summary={[profile.alias, (profile as any).pronouns, [profile.city, profile.country].filter(Boolean).join(", ")].filter(Boolean).join(" · ")}
+          summary={[
+            profile.alias,
+            (profile as any).pronouns,
+            (profile as any).birth_year ? `${new Date().getFullYear() - (profile as any).birth_year}` : null,
+            [profile.city, profile.country].filter(Boolean).join(", "),
+          ].filter(Boolean).join(" · ")}
           open={openSection === "identity"}
           onToggle={() => toggle("identity")}
         >
@@ -150,6 +156,15 @@ export default function EditProfile() {
           onToggle={() => toggle("prompts")}
         >
           <PromptsEditor userId={userId} existing={prompts} onSaved={reload} />
+        </SectionCard>
+
+        <SectionCard
+          title="Social links"
+          summary={`${((profile as any).social_links ?? []).length} linked`}
+          open={openSection === "social"}
+          onToggle={() => toggle("social")}
+        >
+          <SocialLinksEditor userId={userId} profile={profile} onSaved={reload} />
         </SectionCard>
 
         <SectionCard
@@ -252,16 +267,27 @@ function AvatarEditor({ userId, profile, onSaved }: { userId: string; profile: a
 }
 
 function IdentityEditor({ userId, profile, onSaved }: { userId: string; profile: any; onSaved: () => void }) {
+  const thisYear = new Date().getFullYear();
   const [alias, setAlias] = React.useState(profile.alias ?? "");
   const [pronouns, setPronouns] = React.useState(profile.pronouns ?? "");
+  const [birthYear, setBirthYear] = React.useState<string>(
+    profile.birth_year != null ? String(profile.birth_year) : "",
+  );
   const [country, setCountry] = React.useState(profile.country ?? "GB");
   const [city, setCity] = React.useState(profile.city ?? "");
+
+  const parsedBirthYear = (() => {
+    const n = parseInt(birthYear, 10);
+    return Number.isFinite(n) && n >= 1900 && n <= thisYear ? n : null;
+  })();
+
   return (
     <SaveForm
       userId={userId}
       patch={{
         alias: alias.trim(),
         pronouns: pronouns.trim() || null,
+        birth_year: parsedBirthYear,
         country,
         city: city.trim() || null,
       }}
@@ -273,6 +299,17 @@ function IdentityEditor({ userId, profile, onSaved }: { userId: string; profile:
       </Field>
       <Field label="Pronouns (optional)">
         <Input value={pronouns} onChange={(e) => setPronouns(e.target.value)} />
+      </Field>
+      <Field label="Year of birth (optional)" hint="We display age, not date.">
+        <Input
+          type="number"
+          inputMode="numeric"
+          value={birthYear}
+          onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          min={1900}
+          max={thisYear}
+          placeholder={`e.g. ${thisYear - 28}`}
+        />
       </Field>
       <Field label="Country">
         <Select value={country} onChange={(e) => setCountry(e.target.value)}>
@@ -289,10 +326,23 @@ function IdentityEditor({ userId, profile, onSaved }: { userId: string; profile:
 function RootsEditor({ userId, profile, onSaved }: { userId: string; profile: any; onSaved: () => void }) {
   const [descent, setDescent] = React.useState<string[]>(profile.descent ?? []);
   const [languages, setLanguages] = React.useState<string[]>(profile.languages ?? []);
+  const [showAllLangs, setShowAllLangs] = React.useState(false);
+  const [customLang, setCustomLang] = React.useState("");
 
   function toggle(arr: string[], v: string, setter: (a: string[]) => void) {
     setter(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
   }
+
+  function addCustomLang() {
+    const v = customLang.trim();
+    if (v.length < 2 || v.length > 40 || languages.includes(v)) return;
+    setLanguages([...languages, v]);
+    setCustomLang("");
+  }
+
+  const TOP_LANGS = LANGUAGE_OPTIONS.slice(0, 14);
+  const visibleLangs = showAllLangs ? LANGUAGE_OPTIONS : TOP_LANGS;
+  const customLangs = languages.filter((l) => !LANGUAGE_OPTIONS.includes(l));
 
   return (
     <SaveForm userId={userId} patch={{ descent, languages }} onSaved={onSaved} disabled={descent.length === 0}>
@@ -305,16 +355,149 @@ function RootsEditor({ userId, profile, onSaved }: { userId: string; profile: an
           ))}
         </div>
       </Field>
-      <Field label="Languages">
+      <Field label="Languages" hint="Pick as many as you want, or add your own.">
+        {customLangs.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {customLangs.map((l) => (
+              <Chip key={l} as="button" active onClick={() => toggle(languages, l, setLanguages)}>
+                {l} ×
+              </Chip>
+            ))}
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
-          {LANGUAGE_OPTIONS.map((l) => (
+          {visibleLangs.map((l) => (
             <Chip key={l} as="button" active={languages.includes(l)} onClick={() => toggle(languages, l, setLanguages)}>
               {l}
             </Chip>
           ))}
         </div>
+        {!showAllLangs && (
+          <button
+            type="button"
+            onClick={() => setShowAllLangs(true)}
+            className="mt-3 text-sm text-terracotta hover:underline"
+          >
+            Show all languages ({LANGUAGE_OPTIONS.length - TOP_LANGS.length} more)
+          </button>
+        )}
+        <div className="mt-3 flex gap-2">
+          <Input
+            value={customLang}
+            onChange={(e) => setCustomLang(e.target.value)}
+            placeholder="Not listed? Add a language…"
+            maxLength={40}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomLang(); } }}
+          />
+          <Button size="sm" variant="outline" onClick={addCustomLang} disabled={customLang.trim().length < 2}>
+            Add
+          </Button>
+        </div>
       </Field>
     </SaveForm>
+  );
+}
+
+function SocialLinksEditor({ userId, profile, onSaved }: { userId: string; profile: any; onSaved: () => void }) {
+  type Link = { platform: string; url: string };
+  const [links, setLinks] = React.useState<Link[]>(
+    Array.isArray(profile.social_links) ? profile.social_links : [],
+  );
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
+  const [savedAt, setSavedAt] = React.useState<number | null>(null);
+
+  function update(i: number, patch: Partial<Link>) {
+    setLinks((cur) => cur.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  }
+  function add() {
+    setLinks((cur) => [...cur, { platform: "instagram", url: "" }]);
+  }
+  function remove(i: number) {
+    setLinks((cur) => cur.filter((_, idx) => idx !== i));
+  }
+
+  async function save() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const cleaned = links
+        .map((l) => ({
+          platform: l.platform,
+          url: l.url.trim(),
+        }))
+        .filter((l) => l.url.length > 0);
+
+      // Auto-prepend https:// if user typed a bare domain
+      const normalized = cleaned.map((l) => ({
+        ...l,
+        url: /^https?:\/\//i.test(l.url) ? l.url : `https://${l.url}`,
+      }));
+
+      const supa = getSupabaseBrowser();
+      if (!supa) throw new Error("Not configured");
+      const { error } = await supa.from("profiles").update({ social_links: normalized }).eq("id", userId);
+      if (error) throw error;
+      setLinks(normalized);
+      setSavedAt(Date.now());
+      onSaved();
+    } catch (e: any) {
+      setErr(e?.message ?? "Couldn't save.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      {links.length === 0 && (
+        <p className="text-sm text-ink3">
+          Add links to where else you exist online — Instagram, TikTok, your own site.
+        </p>
+      )}
+
+      {links.map((l, i) => (
+        <div key={i} className="flex gap-2 items-end">
+          <div className="w-36">
+            <Field label={i === 0 ? "Platform" : ""}>
+              <Select value={l.platform} onChange={(e) => update(i, { platform: e.target.value })}>
+                {SOCIAL_PLATFORMS.map((p) => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+          <div className="flex-1">
+            <Field label={i === 0 ? "URL or @handle" : ""}>
+              <Input
+                value={l.url}
+                onChange={(e) => update(i, { url: e.target.value })}
+                placeholder="e.g. instagram.com/yaa.o or @yaa.o"
+              />
+            </Field>
+          </div>
+          <button
+            type="button"
+            onClick={() => remove(i)}
+            className="text-xs text-ink3 hover:text-crisis whitespace-nowrap pb-3"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+
+      <button type="button" onClick={add} className="text-sm text-terracotta hover:underline">
+        + Add a link
+      </button>
+
+      {err && <p className="text-sm text-crisis">{err}</p>}
+      <div className="flex items-center gap-3 pt-2">
+        <Button size="sm" onClick={save} disabled={busy}>
+          {busy ? "Saving…" : "Save links"}
+        </Button>
+        {savedAt && !busy && <span className="text-xs text-forest">✓ Saved</span>}
+      </div>
+    </div>
   );
 }
 

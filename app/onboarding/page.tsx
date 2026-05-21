@@ -9,12 +9,13 @@ import { Field, Input, Textarea, Select } from "@/components/ui/Field";
 import { Chip } from "@/components/ui/Chip";
 import { Sankofa, Ubuntu, Pyramid, EyeOfHorus, Dwennimmen, Funtunfunefu } from "@/components/motifs/Motifs";
 import { Icon } from "@/components/ui/Icon";
-import { codeOfConduct, experienceTagPool, promptLibrary } from "@/lib/mock-data";
+import { codeOfConduct, experienceTagPool, promptLibrary, LANGUAGE_OPTIONS } from "@/lib/mock-data";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 
 type State = {
   alias: string;
   pronouns: string;
+  birthYear: string;          // kept as string for the input; parsed on save
   descent: string[];
   languages: string[];
   country: string;
@@ -57,6 +58,7 @@ export default function Onboarding() {
   const [s, setS] = React.useState<State>({
     alias: "",
     pronouns: "",
+    birthYear: "",
     descent: [],
     languages: [],
     country: "GB",
@@ -137,12 +139,21 @@ export default function Onboarding() {
             }
           }
 
+          // Parse birth year — empty / invalid → null
+          const parsedBirthYear = (() => {
+            const n = parseInt(s.birthYear, 10);
+            return Number.isFinite(n) && n >= 1900 && n <= new Date().getFullYear()
+              ? n
+              : null;
+          })();
+
           // ── Upsert profile (creates row if trigger didn't) ────────────────
           const { error: profileError } = await supa.from("profiles").upsert({
             id: session.user.id,
             alias: s.alias.trim(),
             avatar_url: avatarUrl,
             pronouns: s.pronouns || null,
+            birth_year: parsedBirthYear,
             descent: s.descent,
             languages: s.languages,
             country: s.country,
@@ -459,6 +470,7 @@ function StepWelcome() {
 }
 
 function StepIdentity({ s, patch }: { s: State; patch: (p: Partial<State>) => void }) {
+  const thisYear = new Date().getFullYear();
   return (
     <div>
       <StepHeader
@@ -483,6 +495,17 @@ function StepIdentity({ s, patch }: { s: State; patch: (p: Partial<State>) => vo
             placeholder="she/her, they/them, etc."
           />
         </Field>
+        <Field label="Year of birth (optional)" hint="We display age, not date. You can hide this later in profile settings.">
+          <Input
+            type="number"
+            inputMode="numeric"
+            value={s.birthYear}
+            onChange={(e) => patch({ birthYear: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+            placeholder={`e.g. ${thisYear - 28}`}
+            min={1900}
+            max={thisYear}
+          />
+        </Field>
       </div>
     </div>
   );
@@ -493,7 +516,23 @@ function StepRoots({ s, patch }: { s: State; patch: (p: Partial<State>) => void 
     return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
   }
   const descents = ["Ghanaian","Nigerian","Jamaican","Trinidadian","Kenyan","Zimbabwean","South African","Ethiopian","Somali","Sudanese","Senegalese","British","American","Brazilian","Other"];
-  const langs = ["English","Twi","Yoruba","Igbo","Patois","Swahili","French","Portuguese","Arabic","Amharic"];
+
+  const [showAllLangs, setShowAllLangs] = React.useState(false);
+  const [customLang, setCustomLang] = React.useState("");
+
+  // Common languages always shown; the rest hidden under "Show more"
+  const TOP_LANGS = LANGUAGE_OPTIONS.slice(0, 14);
+  const REST_LANGS = LANGUAGE_OPTIONS.slice(14);
+  const visibleLangs = showAllLangs ? LANGUAGE_OPTIONS : TOP_LANGS;
+
+  function addCustomLang() {
+    const v = customLang.trim();
+    if (v.length < 2 || v.length > 40) return;
+    if (s.languages.includes(v)) return;
+    patch({ languages: [...s.languages, v] });
+    setCustomLang("");
+  }
+
   return (
     <div>
       <div className="text-forest mb-3"><Ubuntu size={48} /></div>
@@ -507,14 +546,50 @@ function StepRoots({ s, patch }: { s: State; patch: (p: Partial<State>) => void 
           ))}
         </div>
       </Field>
+
       <div className="h-5" />
-      <Field label="Languages you carry">
+
+      <Field label="Languages you carry" hint="Pick as many as you want, or add your own.">
+        {/* Already-selected custom languages that aren't in the option list */}
+        {s.languages.filter((l) => !LANGUAGE_OPTIONS.includes(l)).length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {s.languages.filter((l) => !LANGUAGE_OPTIONS.includes(l)).map((l) => (
+              <Chip key={l} as="button" active onClick={() => patch({ languages: toggle(s.languages, l) })}>
+                {l} ×
+              </Chip>
+            ))}
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-2">
-          {langs.map((l) => (
+          {visibleLangs.map((l) => (
             <Chip key={l} as="button" active={s.languages.includes(l)} onClick={() => patch({ languages: toggle(s.languages, l) })}>
               {l}
             </Chip>
           ))}
+        </div>
+
+        {!showAllLangs && (
+          <button
+            type="button"
+            onClick={() => setShowAllLangs(true)}
+            className="mt-3 text-sm text-terracotta hover:underline"
+          >
+            Show all languages ({REST_LANGS.length} more)
+          </button>
+        )}
+
+        <div className="mt-4 flex gap-2">
+          <Input
+            value={customLang}
+            onChange={(e) => setCustomLang(e.target.value)}
+            placeholder="Not listed? Add a language…"
+            maxLength={40}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomLang(); } }}
+          />
+          <Button size="sm" variant="outline" onClick={addCustomLang} disabled={customLang.trim().length < 2}>
+            Add
+          </Button>
         </div>
       </Field>
     </div>
@@ -614,30 +689,53 @@ function StepDiagnosis({ s, patch }: { s: State; patch: (p: Partial<State>) => v
 }
 
 function StepPrompts({ s, patch }: { s: State; patch: (p: Partial<State>) => void }) {
-  const all = [...promptLibrary.light, ...promptLibrary.medium, ...promptLibrary.heavy];
+  // Group prompts by depth — users can pick which ones speak to them.
+  const groups = [
+    { title: "Light", prompts: promptLibrary.light },
+    { title: "Deeper", prompts: promptLibrary.medium },
+    { title: "Heavy — only if it feels right", prompts: promptLibrary.heavy },
+  ];
+
   function setAnswer(q: string, v: string) {
     const next = s.prompts.filter((p) => p.question !== q);
     if (v.trim()) next.push({ question: q, answer: v });
     patch({ prompts: next });
   }
   function get(q: string) { return s.prompts.find((p) => p.question === q)?.answer ?? ""; }
+  const answered = s.prompts.filter((p) => p.answer.trim()).length;
+
   return (
     <div>
       <div className="text-terracotta mb-3"><Funtunfunefu size={48} /></div>
       <StepHeader
         kicker="Step 7 · Prompts"
         title="Answer at least two."
-        body="These are how Tribes find you. Honest, specific answers travel further than polished ones."
+        body="These are how Tribes find you. Skip any that don't fit — honest, specific answers travel further than polished ones."
       />
-      <div className="space-y-5">
-        {all.slice(0, 5).map((q) => (
-          <Field key={q} label={q}>
-            <Textarea rows={2} value={get(q)} onChange={(e) => setAnswer(q, e.target.value)} placeholder="Take your time." maxLength={280} />
-          </Field>
+
+      <div className="space-y-8">
+        {groups.map((g) => (
+          <div key={g.title}>
+            <p className="eyebrow mb-3">{g.title}</p>
+            <div className="space-y-4">
+              {g.prompts.map((q) => (
+                <Field key={q} label={q}>
+                  <Textarea
+                    rows={2}
+                    value={get(q)}
+                    onChange={(e) => setAnswer(q, e.target.value)}
+                    placeholder="Take your time. Skip if it doesn't fit."
+                    maxLength={500}
+                  />
+                </Field>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
-      <p className="mt-3 text-xs text-ink3">
-        {s.prompts.filter((p) => p.answer.trim()).length} of 5 answered · 2 required
+
+      <p className="mt-4 text-xs text-ink3 sticky bottom-2 bg-parchment/90 rounded-md py-1 px-2 inline-block">
+        {answered} answered · 2 required to continue
       </p>
     </div>
   );

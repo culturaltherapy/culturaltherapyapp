@@ -424,21 +424,75 @@ export const promptLibrary = {
     "A song that always works.",
     "What's home about home?",
     "A place I'd take a friend who needed to exhale.",
-    "First language I dream in."
+    "First language I dream in.",
+    "What makes you happy or brings you peace?",
+    "What's your biggest success story?",
+    "What would be your perfect Tribe?",
+    "Is peer support / helping others something you would consider?",
+    "Would you use your journey to help others?"
   ],
   medium: [
     "What brings you to this app?",
     "What does therapy mean in my family?",
     "A truth I'm still learning to say out loud.",
     "What I want from a Tribe.",
-    "Where stigma shows up in my life."
+    "Where stigma shows up in my life.",
+    "What are your best coping strategies?",
+    "Has therapy helped? (If yes, share what helped.)",
+    "Do you feel like you have a good support system?",
+    "Who has been the most supportive to you in your journey?",
+    "Are you diagnosed, undiagnosed, or self-diagnosed?"
   ],
   heavy: [
     "A part of my story I'm still working out.",
     "What I've lived through that I rarely name.",
-    "How I carry what I carry."
+    "How I carry what I carry.",
+    "Have you ever been sectioned before?",
+    "How long have you been managing mental health challenges?",
+    "If you were professionally diagnosed, do you agree with it?",
+    "Does mental health stigma affect you?",
+    "Are you comfortable discussing trauma / lived experience here?"
   ]
 };
+
+// Comprehensive language list — broadened from the original 10 for a global diaspora.
+// Users can also add custom languages via a text input that falls back to free-text.
+export const LANGUAGE_OPTIONS = [
+  // Common English-speaking & European
+  "English", "French", "Portuguese", "Spanish", "Italian", "German", "Dutch", "Greek",
+  "Russian", "Polish", "Romanian", "Hungarian",
+  // West African
+  "Twi", "Yoruba", "Igbo", "Hausa", "Pidgin English", "Wolof", "Fulani / Fulfulde",
+  "Bambara", "Ewe", "Ga", "Mandinka",
+  // East / Central African
+  "Swahili", "Amharic", "Tigrinya", "Oromo", "Somali", "Lingala", "Kinyarwanda",
+  "Luganda", "Kikuyu",
+  // Southern African
+  "Zulu", "Xhosa", "Sotho", "Tswana", "Shona", "Ndebele", "Afrikaans",
+  // Caribbean
+  "Patois", "Haitian Creole", "Krio",
+  // Middle Eastern
+  "Arabic", "Hebrew", "Persian / Farsi", "Turkish", "Kurdish",
+  // South Asian
+  "Hindi", "Urdu", "Bengali", "Punjabi", "Tamil", "Telugu", "Gujarati",
+  "Marathi", "Malayalam", "Kannada", "Sinhala", "Nepali",
+  // East / South-East Asian
+  "Mandarin", "Cantonese", "Japanese", "Korean", "Vietnamese", "Thai",
+  "Tagalog / Filipino", "Indonesian", "Malay", "Khmer", "Burmese",
+  // Sign languages
+  "BSL (British Sign Language)", "ASL (American Sign Language)",
+];
+
+// Social link platforms — each profile can have any/all of these.
+export const SOCIAL_PLATFORMS = [
+  { value: "instagram", label: "Instagram", prefix: "https://instagram.com/" },
+  { value: "twitter",   label: "X / Twitter", prefix: "https://x.com/" },
+  { value: "tiktok",    label: "TikTok",     prefix: "https://tiktok.com/@" },
+  { value: "linkedin",  label: "LinkedIn",   prefix: "https://linkedin.com/in/" },
+  { value: "youtube",   label: "YouTube",    prefix: "https://youtube.com/@" },
+  { value: "website",   label: "Website",    prefix: "https://" },
+  { value: "other",     label: "Other",      prefix: "" },
+] as const;
 
 export const codeOfConduct = [
   {

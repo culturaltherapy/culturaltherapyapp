@@ -33,8 +33,13 @@ export default function MyPublicProfile() {
   const verified = (profile as any)?.id_verified ?? false;
   const avatarColor = (profile as any)?.avatar_color ?? "var(--ct-rust)";
   const avatarUrl = (profile as any)?.avatar_url ?? null;
+  const birthYear: number | null = (profile as any)?.birth_year ?? null;
+  const socialLinks: { platform: string; url: string }[] =
+    (profile as any)?.social_links ?? [];
+  const age = birthYear ? new Date().getFullYear() - birthYear : null;
 
   const locationLine = [
+    age ? `${age}` : null,
     [city, country].filter(Boolean).join(", "),
     descent.join(" · "),
   ].filter(Boolean).join(" · ");
@@ -124,6 +129,28 @@ export default function MyPublicProfile() {
               {languages.length > 0 ? languages.join(" · ") : "—"}
             </p>
           </div>
+
+          {/* Social links */}
+          {socialLinks.length > 0 && (
+            <div className="surface p-5">
+              <h3 className="font-display text-lg">Find me elsewhere</h3>
+              <ul className="mt-2 space-y-1.5 text-sm">
+                {socialLinks.map((l, i) => (
+                  <li key={i}>
+                    <a
+                      href={l.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-terracotta hover:underline inline-flex items-center gap-1.5 break-all"
+                    >
+                      <span className="capitalize text-ink3 text-xs font-mono">{l.platform}</span>
+                      <span>{l.url.replace(/^https?:\/\//, "")}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Open to */}
           <div className="surface p-5">
