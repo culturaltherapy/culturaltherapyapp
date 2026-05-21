@@ -16,14 +16,15 @@ export async function GET(request: Request) {
       if (!error && data?.session) {
         // Check if user has completed onboarding (profile.alias set).
         // If not, send them to /onboarding regardless of what `next` says.
-        const { data: profile } = await supabase
+        const { data: profile } = await (supabase as any)
           .from("profiles")
           .select("alias")
           .eq("id", data.session.user.id)
           .maybeSingle();
 
+        const alias = profile?.alias;
         const aliasIsSet =
-          profile?.alias != null && String(profile.alias).trim().length > 0;
+          alias != null && String(alias).trim().length > 0;
 
         const destination = aliasIsSet ? next : "/onboarding";
         return NextResponse.redirect(`${origin}${destination}`);
