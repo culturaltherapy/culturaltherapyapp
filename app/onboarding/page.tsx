@@ -254,6 +254,13 @@ function StepHeader({ kicker, title, body }: { kicker: string; title: string; bo
 }
 
 function StepCreateAccount({ onSuccess, existingEmail }: { onSuccess: () => void; existingEmail: string | null }) {
+  // All hooks must come before any conditional return
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
+  const [msg, setMsg] = React.useState<string | null>(null);
+
   // Already signed in — show a confirmation rather than a sign-up form
   if (existingEmail) {
     return (
@@ -284,11 +291,6 @@ function StepCreateAccount({ onSuccess, existingEmail }: { onSuccess: () => void
       </div>
     );
   }
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [busy, setBusy] = React.useState(false);
-  const [err, setErr] = React.useState<string | null>(null);
-  const [msg, setMsg] = React.useState<string | null>(null);
 
   async function handleEmail(e: React.FormEvent) {
     e.preventDefault();
