@@ -161,13 +161,19 @@ export default function Onboarding() {
             setSaveErr(profileError.message);
           }
 
-          // Save prompt answers
+          // Save prompt answers. First clear any existing onboarding prompts
+          // (so re-running onboarding doesn't pile up stale ones), then insert
+          // the current ones with the actual question text.
           const filledPrompts = s.prompts.filter((p) => p.answer.trim());
+          await supa.from("profile_prompts")
+            .delete()
+            .eq("user_id", session.user.id);
           if (filledPrompts.length > 0) {
-            await supa.from("profile_prompts").upsert(
+            await supa.from("profile_prompts").insert(
               filledPrompts.map((p, i) => ({
                 user_id: session.user.id,
                 prompt_id: `onboarding_${i}`,
+                question: p.question,
                 answer: p.answer.trim(),
                 visibility: "tribe" as const,
               }))
