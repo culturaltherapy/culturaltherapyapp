@@ -1,19 +1,24 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { useUserPrompts } from "@/lib/hooks/useMyPrompts";
+import { useSession } from "@/lib/hooks/useSession";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { EyeOfHorus } from "@/components/motifs/Motifs";
 import { Icon } from "@/components/ui/Icon";
+import { InviteToTribeModal } from "@/components/tribes/InviteToTribeModal";
 
 export default function ViewProfile() {
   const params = useParams<{ id: string }>();
+  const { userId: currentUserId } = useSession();
   const { data: profile, isLoading } = useProfile(params.id);
   const { data: prompts = [] } = useUserPrompts(params.id);
+  const [inviteOpen, setInviteOpen] = React.useState(false);
 
   if (isLoading) {
     return (
@@ -72,8 +77,12 @@ export default function ViewProfile() {
             </div>
           </div>
           <div className="flex gap-2">
-            {acceptsDms && <Button variant="outline">Message</Button>}
-            {acceptsTribe && <Button>Send Tribe request</Button>}
+            {acceptsDms && currentUserId && currentUserId !== params.id && (
+              <Button variant="outline">Message</Button>
+            )}
+            {acceptsTribe && currentUserId && currentUserId !== params.id && (
+              <Button onClick={() => setInviteOpen(true)}>Send Tribe request</Button>
+            )}
           </div>
         </div>
       </section>
@@ -94,6 +103,12 @@ export default function ViewProfile() {
           )}
         </div>
 
+        <InviteToTribeModal
+          open={inviteOpen}
+          onClose={() => setInviteOpen(false)}
+          targetUserId={params.id}
+          targetAlias={alias}
+        />
         <aside className="space-y-5">
           {languages.length > 0 && (
             <div className="surface p-5">
