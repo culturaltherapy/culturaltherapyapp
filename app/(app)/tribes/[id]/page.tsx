@@ -124,7 +124,9 @@ export default function VillagePage() {
               </Button>
               {sendRequest.isError && (
                 <p className="mt-3 text-sm text-crisis">
-                  Couldn't send request: {(sendRequest.error as any)?.message ?? "Try again."}
+                  {(sendRequest.error as any)?.message?.includes("tribe_requests_unique_pending")
+                    ? "You already have a pending request to this Tribe."
+                    : `Couldn't send request: ${(sendRequest.error as any)?.message ?? "Try again."}`}
                 </p>
               )}
             </>

@@ -146,12 +146,14 @@ export function usePendingTribeRequests() {
       const { data: { session } } = await supa.auth.getSession();
       if (!session) return [];
 
-      const { data, error } = await (supa as any)
+      // 1. Fetch requests + tribe metadata (tribes FK works fine).
+      //    Don't embed profiles — the FK on tribe_requests.user_id points
+      //    to auth.users not profiles, so PostgREST can't resolve it.
+      const { data: requests, error } = await (supa as any)
         .from("tribe_requests")
         .select(`
           id, tribe_id, user_id, initiated_by, message, status, created_at,
-          tribes(id, name, blurb, color, motif, owner_id),
-          requester:profiles!tribe_requests_user_id_fkey(id, alias, avatar_url, avatar_color, city, country)
+          tribes(id, name, blurb, color, motif, owner_id)
         `)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
@@ -160,8 +162,27 @@ export function usePendingTribeRequests() {
         console.error("usePendingTribeRequests error:", error.message);
         return [];
       }
-      // Filter client-side to be defensive (RLS does this server-side too)
-      return (data ?? []).filter((r: any) =>
+
+      if (!requests || requests.length === 0) return [];
+
+      // 2. Look up requester profiles in a separate query.
+      const requesterIds = Array.from(new Set(requests.map((r: any) => r.user_id)));
+      const { data: profiles } = await (supa as any)
+        .from("profiles")
+        .select("id, alias, avatar_url, avatar_color, city, country")
+        .in("id", requesterIds);
+
+      const profileMap = new Map<string, any>(
+        (profiles ?? []).map((p: any) => [p.id, p])
+      );
+
+      const enriched = requests.map((r: any) => ({
+        ...r,
+        requester: profileMap.get(r.user_id) ?? null,
+      }));
+
+      // Defensive client-side filter (RLS already handles this server-side).
+      return enriched.filter((r: any) =>
         r.user_id === session.user.id ||
         r.initiated_by === session.user.id ||
         r.tribes?.owner_id === session.user.id
