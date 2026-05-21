@@ -7,7 +7,7 @@ import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea, Select } from "@/components/ui/Field";
 import { Chip } from "@/components/ui/Chip";
-import { Sankofa, Ubuntu, Pyramid, Dwennimmen, Funtunfunefu } from "@/components/motifs/Motifs";
+import { Sankofa, Ubuntu, Pyramid, EyeOfHorus, Dwennimmen, Funtunfunefu } from "@/components/motifs/Motifs";
 import { Icon } from "@/components/ui/Icon";
 import { codeOfConduct, experienceTagPool, promptLibrary } from "@/lib/mock-data";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
@@ -25,11 +25,12 @@ type State = {
   diagnosisVisible: boolean;
   prompts: { question: string; answer: string }[];
   avatar: string | null;
+  idStatus: "idle" | "verifying" | "verified";
   cocVisited: Record<string, boolean>;
   cocAccepted: boolean;
 };
 
-// Step map (10 steps — ID verification removed, wired to a real vendor later)
+// Step map (11 steps)
 // 1  Welcome
 // 2  Identity (alias / pronouns)
 // 3  Roots (descent / languages)
@@ -38,9 +39,10 @@ type State = {
 // 6  Diagnosis (optional)
 // 7  Prompts
 // 8  Avatar
-// 9  Code of Conduct
-// 10 Done
-const TOTAL = 10;
+// 9  ID Verification (simulated placeholder — real vendor wired later)
+// 10 Code of Conduct
+// 11 Done
+const TOTAL = 11;
 
 export default function Onboarding() {
   const router = useRouter();
@@ -60,6 +62,7 @@ export default function Onboarding() {
     diagnosisVisible: false,
     prompts: [],
     avatar: null,
+    idStatus: "idle",
     cocVisited: {},
     cocAccepted: false,
   });
@@ -73,16 +76,17 @@ export default function Onboarding() {
 
   const canContinue = React.useMemo(() => {
     switch (step) {
-      case 1: return true;
-      case 2: return s.alias.trim().length >= 2;
-      case 3: return s.descent.length > 0;
-      case 4: return s.country.length >= 2;
-      case 5: return s.experienceTags.length >= 1;
-      case 6: return true;
-      case 7: return s.prompts.filter((p) => p.answer.trim().length > 0).length >= 2;
-      case 8: return true;
-      case 9: return s.cocAccepted;
-      case 10: return true;
+      case 1:  return true;
+      case 2:  return s.alias.trim().length >= 2;
+      case 3:  return s.descent.length > 0;
+      case 4:  return s.country.length >= 2;
+      case 5:  return s.experienceTags.length >= 1;
+      case 6:  return true;
+      case 7:  return s.prompts.filter((p) => p.answer.trim().length > 0).length >= 2;
+      case 8:  return true;
+      case 9:  return s.idStatus === "verified";
+      case 10: return s.cocAccepted;
+      case 11: return true;
       default: return false;
     }
   }, [step, s]);
@@ -173,8 +177,9 @@ export default function Onboarding() {
           {step === 6  && <StepDiagnosis s={s} patch={patch} />}
           {step === 7  && <StepPrompts s={s} patch={patch} />}
           {step === 8  && <StepAvatar s={s} patch={patch} />}
-          {step === 9  && <StepCoC s={s} patch={patch} />}
-          {step === 10 && <StepDone s={s} onFinish={finish} saving={saving} saveErr={saveErr} />}
+          {step === 9  && <StepID s={s} patch={patch} />}
+          {step === 10 && <StepCoC s={s} patch={patch} />}
+          {step === 11 && <StepDone s={s} onFinish={finish} saving={saving} saveErr={saveErr} />}
         </div>
       </main>
 
@@ -464,13 +469,46 @@ function StepAvatar({ s, patch }: { s: State; patch: (p: Partial<State>) => void
   );
 }
 
+function StepID({ s, patch }: { s: State; patch: (p: Partial<State>) => void }) {
+  function start() {
+    patch({ idStatus: "verifying" });
+    // Simulated verification — replace this block with a real Persona/Onfido SDK call
+    setTimeout(() => patch({ idStatus: "verified" }), 1800);
+  }
+  return (
+    <div>
+      <div className="text-terracotta mb-3"><EyeOfHorus size={48} /></div>
+      <StepHeader
+        kicker="Step 9 · ID verification"
+        title="One quick check. Then you're in."
+        body="We verify ID through a third-party (Persona). They store the document — we only see a 'verified' flag. This is required before you can post publicly, and it keeps the network safer."
+      />
+      {s.idStatus === "idle" && (
+        <Button onClick={start} size="lg">Start verification</Button>
+      )}
+      {s.idStatus === "verifying" && (
+        <div className="surface p-5 inline-flex items-center gap-3">
+          <span className="h-3 w-3 rounded-full bg-ochre animate-pulse" />
+          Verifying… don't close this tab.
+        </div>
+      )}
+      {s.idStatus === "verified" && (
+        <div className="surface p-5 inline-flex items-center gap-3 text-forest">
+          <Icon name="check" size={20} /> ID verified. You're cleared to post.
+        </div>
+      )}
+      <p className="mt-4 text-xs text-ink3">Your document is never stored on our servers.</p>
+    </div>
+  );
+}
+
 function StepCoC({ s, patch }: { s: State; patch: (p: Partial<State>) => void }) {
   const allVisited = codeOfConduct.every((c) => s.cocVisited[c.id]);
   return (
     <div>
       <div className="text-forest mb-3"><Dwennimmen size={48} /></div>
       <StepHeader
-        kicker="Step 9 · Code of conduct"
+        kicker="Step 10 · Code of conduct"
         title="Read each clause. Then accept."
         body="Tap each one to expand it. Mods enforce these."
       />
@@ -523,7 +561,7 @@ function StepDone({ s, onFinish, saving, saveErr }: {
     <div>
       <div className="text-terracotta mb-3"><Pyramid size={56} /></div>
       <StepHeader
-        kicker="Step 10 · You're in"
+        kicker="Step 11 · You're in"
         title={`Welcome, ${s.alias || "friend"}.`}
         body="We've set you up. Your next step is to find a Tribe — start with the Lived Experience grid."
       />
