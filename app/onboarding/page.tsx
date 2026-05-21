@@ -51,6 +51,9 @@ export default function Onboarding() {
   const [step, setStep] = React.useState(0);
   const [saving, setSaving] = React.useState(false);
   const [saveErr, setSaveErr] = React.useState<string | null>(null);
+  // Detected session email for step 0 "already signed in" variant
+  const [sessionEmail, setSessionEmail] = React.useState<string | null>(null);
+  const [authChecked, setAuthChecked] = React.useState(false);
   const [s, setS] = React.useState<State>({
     alias: "",
     pronouns: "",
@@ -73,12 +76,13 @@ export default function Onboarding() {
     setS((prev) => ({ ...prev, ...p }));
   }
 
-  // If already signed in, skip the account-creation gate
+  // Check auth state — always show step 0, but adapt its content
   React.useEffect(() => {
     const supa = getSupabaseBrowser();
-    if (!supa) { setStep(1); return; }
+    if (!supa) { setAuthChecked(true); return; }
     supa.auth.getSession().then(({ data: { session } }) => {
-      if (session) setStep(1);
+      if (session?.user?.email) setSessionEmail(session.user.email);
+      setAuthChecked(true);
     });
   }, []);
 
@@ -189,7 +193,11 @@ export default function Onboarding() {
 
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">
         <div className="mx-auto max-w-2xl">
-          {step === 0  && <StepCreateAccount onSuccess={() => setStep(1)} />}
+          {step === 0  && (
+            authChecked
+              ? <StepCreateAccount onSuccess={() => setStep(1)} existingEmail={sessionEmail} />
+              : <div className="flex justify-center py-20"><div className="h-6 w-6 rounded-full border-2 border-terracotta border-t-transparent animate-spin" /></div>
+          )}
           {step === 1  && <StepWelcome />}
           {step === 2  && <StepIdentity s={s} patch={patch} />}
           {step === 3  && <StepRoots s={s} patch={patch} />}
@@ -245,7 +253,37 @@ function StepHeader({ kicker, title, body }: { kicker: string; title: string; bo
   );
 }
 
-function StepCreateAccount({ onSuccess }: { onSuccess: () => void }) {
+function StepCreateAccount({ onSuccess, existingEmail }: { onSuccess: () => void; existingEmail: string | null }) {
+  // Already signed in — show a confirmation rather than a sign-up form
+  if (existingEmail) {
+    return (
+      <div>
+        <div className="text-forest mb-4"><Sankofa size={48} /></div>
+        <p className="eyebrow">Account ready</p>
+        <h1 className="font-display text-3xl sm:text-4xl mt-2 leading-tight">
+          You're already signed in.
+        </h1>
+        <p className="text-ink2 mt-2">
+          Signed in as <strong>{existingEmail}</strong>. Ready to set up your profile?
+        </p>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Button size="lg" onClick={onSuccess}>
+            Set up my profile →
+          </Button>
+          <button
+            onClick={async () => {
+              const supa = getSupabaseBrowser();
+              if (supa) await supa.auth.signOut();
+              window.location.reload();
+            }}
+            className="text-sm text-ink3 hover:text-ink underline self-center"
+          >
+            Sign out and use a different account
+          </button>
+        </div>
+      </div>
+    );
+  }
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [busy, setBusy] = React.useState(false);
