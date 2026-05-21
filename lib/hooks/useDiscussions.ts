@@ -15,8 +15,12 @@ export function useDiscussionRooms() {
         .select("*")
         .order("title");
 
-      if (error || !data?.length) return mockRooms;
-      return data.map((r) => ({
+      if (error) {
+        console.error("useDiscussionRooms error:", error.message);
+        return [];
+      }
+      if (!data) return [];
+      return data.map((r: any) => ({
         id: r.id,
         title: r.title,
         blurb: r.blurb ?? "",

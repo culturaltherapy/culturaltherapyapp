@@ -8,17 +8,21 @@ export function useMyTribes() {
     queryKey: ["tribes", "mine"],
     queryFn: async () => {
       const supa = getSupabaseBrowser();
-      if (!supa) return mockTribes;
+      if (!supa) return mockTribes; // dev fallback only
 
       const { data: { session } } = await supa.auth.getSession();
-      if (!session) return mockTribes;
+      if (!session) return [];
 
       const { data, error } = await supa
         .from("tribe_members")
         .select("tribe_id, role, tribes(id, name, blurb, color, motif, owner_id)")
         .eq("user_id", session.user.id);
 
-      if (error || !data?.length) return mockTribes;
+      if (error) {
+        console.error("useMyTribes error:", error.message);
+        return [];
+      }
+      if (!data) return [];
       return data.map((m: any) => m.tribes).filter(Boolean);
     }
   });

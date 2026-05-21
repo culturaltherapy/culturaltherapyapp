@@ -11,9 +11,22 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await getSupabaseServer();
     if (supabase) {
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (!error) {
-        return NextResponse.redirect(`${origin}${next}`);
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+      if (!error && data?.session) {
+        // Check if user has completed onboarding (profile.alias set).
+        // If not, send them to /onboarding regardless of what `next` says.
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("alias")
+          .eq("id", data.session.user.id)
+          .maybeSingle();
+
+        const aliasIsSet =
+          profile?.alias != null && String(profile.alias).trim().length > 0;
+
+        const destination = aliasIsSet ? next : "/onboarding";
+        return NextResponse.redirect(`${origin}${destination}`);
       }
     }
   }

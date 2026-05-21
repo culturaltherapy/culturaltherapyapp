@@ -149,9 +149,24 @@ export default function NetworkPage() {
       )}
 
       {!isLoading && list.length === 0 && (
-        <div className="mt-10 text-center text-ink3">
-          <p>No matches. Try widening your search.</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={() => setQ("")}>Clear</Button>
+        <div className="mt-12 mx-auto max-w-md text-center">
+          <div className="text-terracotta inline-block mb-3"><Sankofa size={40} /></div>
+          {debouncedQ ? (
+            <>
+              <p className="font-display text-xl">No matches for "{debouncedQ}"</p>
+              <p className="text-ink3 text-sm mt-2">Try widening your search.</p>
+              <Button variant="outline" size="sm" className="mt-4" onClick={() => setQ("")}>
+                Clear search
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="font-display text-xl">You're early.</p>
+              <p className="text-ink3 text-sm mt-2 max-w-sm mx-auto">
+                The network is still growing. As more members complete onboarding they'll appear here. Invite people who'd benefit, or come back soon.
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>
