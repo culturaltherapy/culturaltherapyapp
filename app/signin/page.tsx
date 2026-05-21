@@ -20,6 +20,9 @@ export default function SignInPage() {
   const [msg, setMsg] = React.useState<string | null>(null);
   const [err, setErr] = React.useState<string | null>(null);
 
+  // Show banner if user completed onboarding before confirming email
+  const hasPendingProfile = typeof window !== "undefined" && !!localStorage.getItem("ct_pending_profile");
+
   const heading: Record<Mode, string> = {
     signin: "Welcome back.",
     signup: "Make a space here.",
@@ -124,6 +127,12 @@ export default function SignInPage() {
               {heading[mode]}
             </h1>
             <p className="text-ink2 mt-2">{sub[mode]}</p>
+
+            {hasPendingProfile && (
+              <div className="mt-4 rounded-md bg-forest/10 border border-forest/20 px-4 py-3 text-sm text-forest">
+                Your onboarding answers are saved. Sign in to apply them to your profile.
+              </div>
+            )}
 
             {/* OAuth */}
             {(mode === "signin" || mode === "signup") && (
