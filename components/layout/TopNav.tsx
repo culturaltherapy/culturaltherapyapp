@@ -8,6 +8,8 @@ import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 import { me } from "@/lib/mock-data";
 import { useSession } from "@/lib/hooks/useSession";
+import { useUnreadCount } from "@/lib/hooks/useNotifications";
+import { NotificationsPanel } from "@/components/notifications/NotificationsPanel";
 
 const navItems = [
   { href: "/home", label: "Home" },
@@ -23,6 +25,8 @@ export function TopNav() {
   const alias = profile?.alias ?? me.alias;
   const avatarColor = (profile as any)?.avatar_color ?? me.avatarColor;
   const avatarUrl = (profile as any)?.avatar_url ?? null;
+  const unread = useUnreadCount();
+  const [notifOpen, setNotifOpen] = React.useState(false);
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-parchment/85 backdrop-blur supports-[backdrop-filter]:bg-parchment/70">
@@ -59,12 +63,24 @@ export function TopNav() {
             <Icon name="shield" size={14} />
             Help now
           </button>
-          <button
-            aria-label="Notifications"
-            className="text-ink2 hover:text-ink p-1.5"
-          >
-            <Icon name="bell" size={20} />
-          </button>
+
+          {/* Notifications */}
+          <div className="relative">
+            <button
+              aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ""}`}
+              onClick={() => setNotifOpen((v) => !v)}
+              className="text-ink2 hover:text-ink p-1.5 relative"
+            >
+              <Icon name="bell" size={20} />
+              {unread > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-crisis text-bone text-[10px] font-mono font-bold flex items-center justify-center px-1">
+                  {unread > 99 ? "99+" : unread}
+                </span>
+              )}
+            </button>
+            <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
+          </div>
+
           <Link href="/profile" aria-label="My profile">
             <Avatar name={alias} color={avatarColor} size={36} src={avatarUrl} />
           </Link>

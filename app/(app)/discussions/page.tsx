@@ -1,18 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { useDiscussionRooms, useDiscussionPosts, usePostToDiscussion } from "@/lib/hooks/useDiscussions";
+import Link from "next/link";
+import { useDiscussionRooms, useDiscussionThreads, usePostToDiscussion } from "@/lib/hooks/useDiscussions";
 import { Button } from "@/components/ui/Button";
 import { Funtunfunefu } from "@/components/motifs/Motifs";
-import { Icon } from "@/components/ui/Icon";
+import { Avatar } from "@/components/ui/Avatar";
+import { NewThreadModal } from "@/components/discussions/NewThreadModal";
+import { timeAgo } from "@/lib/utils";
 
 export default function DiscussionsPage() {
   const { data: rooms = [], isLoading: roomsLoading } = useDiscussionRooms();
   const [activeRoomId, setActiveRoomId] = React.useState<string | null>(null);
+  const [showNewThread, setShowNewThread] = React.useState(false);
 
   const roomId = activeRoomId ?? rooms[0]?.id ?? "";
   const room = rooms.find((r) => r.id === roomId) ?? rooms[0];
-  const { data: threads = [] } = useDiscussionPosts(roomId);
+  const { data: threads = [] } = useDiscussionThreads(roomId);
 
   return (
     <div>
@@ -46,7 +50,6 @@ export default function DiscussionsPage() {
                         </div>
                         <p className="text-xs text-ink3 mt-0.5">{r.blurb}</p>
                       </div>
-                      <span className="text-[11px] text-ink3 font-mono whitespace-nowrap">{r.count || ""}</span>
                     </button>
                   </li>
                 );
@@ -63,24 +66,43 @@ export default function DiscussionsPage() {
                   <h2 className="font-display text-2xl">{room.title}</h2>
                   <p className="text-ink3 text-sm">{room.blurb}</p>
                 </div>
-                <Button>+ Start a thread</Button>
+                {!room.isChat && (
+                  <Button onClick={() => setShowNewThread(true)}>+ Start a thread</Button>
+                )}
               </div>
 
               {room.isChat ? (
                 <ChatRoom roomId={room.id} />
               ) : (
                 <ul className="mt-5 surface divide-y divide-line">
-                  {threads.map((t) => (
-                    <li key={t.id} className="px-4 py-3 hover:bg-ink/[.02] cursor-pointer">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <h3 className="font-display text-lg">{t.title}</h3>
-                        <span className="text-xs text-ink3 whitespace-nowrap">{t.last}</span>
-                      </div>
-                      <div className="mt-1 flex items-center gap-3 text-xs text-ink3">
-                        <span>{t.replies} replies</span>
-                        <span>·</span>
-                        <span>Room: {room.title}</span>
-                      </div>
+                  {threads.map((t: any) => (
+                    <li key={t.id}>
+                      <Link
+                        href={`/discussions/${t.id}`}
+                        className="block px-4 py-3 hover:bg-ink/[.02] transition"
+                      >
+                        <div className="flex items-baseline justify-between gap-3">
+                          <h3 className="font-display text-lg">
+                            {t.title || (t.body ?? "").slice(0, 80) + ((t.body ?? "").length > 80 ? "…" : "")}
+                          </h3>
+                          <span className="text-xs text-ink3 whitespace-nowrap">{timeAgo(t.created_at)}</span>
+                        </div>
+                        {t.title && t.body && (
+                          <p className="text-ink2 text-sm mt-1 line-clamp-2">{t.body}</p>
+                        )}
+                        <div className="mt-2 flex items-center gap-3 text-xs text-ink3">
+                          <div className="flex items-center gap-1.5">
+                            <Avatar
+                              name={t.author?.alias ?? "Member"}
+                              src={t.author?.avatar_url}
+                              size={18}
+                            />
+                            <span>{t.author?.alias ?? "Member"}</span>
+                          </div>
+                          <span>·</span>
+                          <span>{t.reply_count} {t.reply_count === 1 ? "reply" : "replies"}</span>
+                        </div>
+                      </Link>
                     </li>
                   ))}
                   {threads.length === 0 && (
@@ -99,12 +121,20 @@ export default function DiscussionsPage() {
           </div>
         </section>
       </div>
+
+      {room && !room.isChat && (
+        <NewThreadModal
+          open={showNewThread}
+          onClose={() => setShowNewThread(false)}
+          roomId={room.id}
+          roomTitle={room.title}
+        />
+      )}
     </div>
   );
 }
 
 function ChatRoom({ roomId }: { roomId: string }) {
-  const { data: serverPosts = [] } = useDiscussionPosts(roomId);
   const postMutation = usePostToDiscussion();
   const [msgs, setMsgs] = React.useState([
     { id: "seed1", who: "Adwoa K.", text: "Just finished therapy — it was a lot.", t: "2m" },
