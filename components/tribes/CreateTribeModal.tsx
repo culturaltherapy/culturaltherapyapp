@@ -17,7 +17,15 @@ const COLOR_OPTIONS = [
   { label: "Slate",     value: "#3a4554" },
 ];
 
-const MOTIF_OPTIONS = ["Sankofa", "Ubuntu", "Dwennimmen", "Funtunfunefu", "EyeOfHorus", "Pyramid", "Ankh"];
+const MOTIF_OPTIONS: { key: string; label: string }[] = [
+  { key: "sankofa",      label: "Sankofa" },
+  { key: "ubuntu",       label: "Ubuntu" },
+  { key: "dwennimmen",   label: "Dwennimmen" },
+  { key: "funtunfunefu", label: "Funtunfunefu" },
+  { key: "eye",          label: "Eye of Horus" },
+  { key: "pyramid",      label: "Pyramid" },
+  { key: "ankh",         label: "Ankh" },
+];
 
 export function CreateTribeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
@@ -26,12 +34,12 @@ export function CreateTribeModal({ open, onClose }: { open: boolean; onClose: ()
   const [name, setName] = React.useState("");
   const [blurb, setBlurb] = React.useState("");
   const [color, setColor] = React.useState(COLOR_OPTIONS[0].value);
-  const [motif, setMotif] = React.useState(MOTIF_OPTIONS[0]);
+  const [motif, setMotif] = React.useState(MOTIF_OPTIONS[0].key);
   const [err, setErr] = React.useState<string | null>(null);
 
   function reset() {
     setName(""); setBlurb(""); setColor(COLOR_OPTIONS[0].value);
-    setMotif(MOTIF_OPTIONS[0]); setErr(null);
+    setMotif(MOTIF_OPTIONS[0].key); setErr(null);
   }
 
   async function submit() {
@@ -128,18 +136,18 @@ export function CreateTribeModal({ open, onClose }: { open: boolean; onClose: ()
         <Field label="Motif">
           <div className="flex flex-wrap gap-2">
             {MOTIF_OPTIONS.map((m) => {
-              const active = motif === m;
+              const active = motif === m.key;
               return (
                 <button
-                  key={m}
-                  onClick={() => setMotif(m)}
+                  key={m.key}
+                  onClick={() => setMotif(m.key)}
                   className={`h-12 w-12 rounded-lg border flex items-center justify-center transition ${
                     active ? "border-ink bg-ink text-bone" : "border-line bg-bone hover:bg-ink/5 text-ink"
                   }`}
-                  aria-label={m}
-                  title={m}
+                  aria-label={m.label}
+                  title={m.label}
                 >
-                  <Motif name={m as any} size={24} />
+                  <Motif name={m.key} size={24} />
                 </button>
               );
             })}

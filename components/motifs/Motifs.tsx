@@ -124,7 +124,10 @@ export const MOTIFS = {
 
 export type MotifName = keyof typeof MOTIFS;
 
-export function Motif({ name, ...rest }: { name: MotifName } & MotifProps) {
-  const Component = MOTIFS[name];
+export function Motif({ name, ...rest }: { name: MotifName | string | null | undefined } & MotifProps) {
+  // Defensive: unknown / null / wrong-case motif names fall back to Ubuntu
+  // rather than crashing the page with `<undefined />`.
+  const key = (name as string)?.toLowerCase() as MotifName;
+  const Component = MOTIFS[key] ?? MOTIFS.ubuntu;
   return <Component {...rest} />;
 }

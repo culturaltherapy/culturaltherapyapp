@@ -148,7 +148,7 @@ create or replace function public.create_tribe(
   p_name  text,
   p_blurb text default null,
   p_color text default '#2f4a32',
-  p_motif text default 'Ubuntu'
+  p_motif text default 'ubuntu'
 )
 returns uuid
 language plpgsql
