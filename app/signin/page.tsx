@@ -92,7 +92,7 @@ export default function SignInPage() {
     }
   }
 
-  async function oauth(provider: "google" | "apple") {
+  async function oauth(provider: "google") {
     const supa = getSupabaseBrowser();
     if (!supa) {
       // Demo path
@@ -142,12 +142,6 @@ export default function SignInPage() {
                   className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-line bg-bone px-4 py-2.5 text-[15px] font-medium hover:bg-ink/5"
                 >
                   <GoogleIcon /> Continue with Google
-                </button>
-                <button
-                  onClick={() => oauth("apple")}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-ink text-bone px-4 py-2.5 text-[15px] font-medium hover:bg-ink2"
-                >
-                  <AppleIcon /> Continue with Apple
                 </button>
                 <div className="my-4 flex items-center gap-3 text-xs text-ink3">
                   <span className="h-px bg-line flex-1" />
@@ -302,10 +296,3 @@ function GoogleIcon() {
   );
 }
 
-function AppleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M16.4 12.3a4.5 4.5 0 0 1 2.2-3.8 4.7 4.7 0 0 0-3.7-2c-1.6-.2-3 .9-3.8.9-.8 0-2-.9-3.4-.8a4.9 4.9 0 0 0-4.1 2.5C2 12.4 3.3 17.6 5 20.4c.8 1.4 1.8 3 3.1 3 1.3 0 1.8-.8 3.4-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.4 3.1-2.8.6-1 1.1-2.1 1.4-3.2-.2-.1-2.7-1-3-3.1ZM14 5.6c.7-.9 1.2-2 1-3.2-1 0-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5Z" />
-    </svg>
-  );
-}
