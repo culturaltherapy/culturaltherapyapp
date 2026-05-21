@@ -33,10 +33,15 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 -- ────────────────────────────────────────────────────────────────────────────
--- 3) Reset any auto-generated aliases on profiles that haven't completed
---    onboarding yet (so the gate redirects existing email-prefix profiles
---    back through onboarding).
+-- 3) Relax the NOT NULL constraint on alias so the trigger can insert rows
+--    without one. Alias is set during onboarding step 2; until then it stays null.
 -- ────────────────────────────────────────────────────────────────────────────
+alter table public.profiles
+  alter column alias drop not null;
+
+-- Reset any auto-generated aliases on profiles that haven't completed
+-- onboarding yet (so the gate redirects existing email-prefix profiles
+-- back through onboarding).
 update public.profiles
    set alias = null
  where onboarding_completed_at is null;
