@@ -64,7 +64,7 @@ export function useTribe(id: string) {
       if (memberIds.length > 0) {
         const { data: profs } = await (supa as any)
           .from("profiles")
-          .select("id, alias, avatar_url, avatar_color")
+          .select("id, alias, avatar_url")
           .in("id", memberIds);
         profiles = profs ?? [];
       }
@@ -169,7 +169,7 @@ export function usePendingTribeRequests() {
       const requesterIds = Array.from(new Set(requests.map((r: any) => r.user_id)));
       const { data: profiles } = await (supa as any)
         .from("profiles")
-        .select("id, alias, avatar_url, avatar_color, city, country")
+        .select("id, alias, avatar_url, city, country")
         .in("id", requesterIds);
 
       const profileMap = new Map<string, any>(
