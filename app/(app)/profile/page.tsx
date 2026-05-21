@@ -19,6 +19,7 @@ export default function MyPublicProfile() {
   const tags = profile?.experience_tags ?? me.experienceTags;
   const verified = (profile as any)?.id_verified ?? me.idVerified;
   const avatarColor = (profile as any)?.avatar_color ?? me.avatarColor;
+  const avatarUrl = (profile as any)?.avatar_url ?? null;
   const prompts = (profile as any)?.prompts ?? [me.prompt];
   const firstPrompt = Array.isArray(prompts) ? prompts[0] : me.prompt;
 
@@ -33,7 +34,7 @@ export default function MyPublicProfile() {
           <EyeOfHorus size={220} />
         </div>
         <div className="relative flex flex-col sm:flex-row gap-5 sm:items-end">
-          <Avatar name={alias} color={avatarColor} size={96} />
+          <Avatar name={alias} color={avatarColor} size={96} src={avatarUrl} />
           <div className="flex-1">
             <p className="eyebrow">My profile · what others see</p>
             <h1 className="font-display text-4xl mt-1 leading-tight">{alias}</h1>

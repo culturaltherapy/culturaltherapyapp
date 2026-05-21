@@ -20,10 +20,13 @@ export default function HomePage() {
   const { data: myTribes = [] } = useMyTribes();
   const { data: rooms = [] } = useDiscussionRooms();
 
-  // Onboarding gate: if signed in but profile is incomplete, send to onboarding
+  // Onboarding gate: if signed in but onboarding wasn't explicitly completed,
+  // send back to /onboarding. Checks the explicit timestamp rather than alias
+  // (since some signup flows seed an alias by default).
   React.useEffect(() => {
     if (loading) return;
-    if (profile && !profile.alias) {
+    const done = (profile as any)?.onboarding_completed_at;
+    if (profile && !done) {
       router.replace("/onboarding");
     }
   }, [loading, profile, router]);

@@ -14,19 +14,16 @@ export async function GET(request: Request) {
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (!error && data?.session) {
-        // Check if user has completed onboarding (profile.alias set).
+        // Check if user has completed onboarding (explicit timestamp).
         // If not, send them to /onboarding regardless of what `next` says.
         const { data: profile } = await (supabase as any)
           .from("profiles")
-          .select("alias")
+          .select("onboarding_completed_at")
           .eq("id", data.session.user.id)
           .maybeSingle();
 
-        const alias = profile?.alias;
-        const aliasIsSet =
-          alias != null && String(alias).trim().length > 0;
-
-        const destination = aliasIsSet ? next : "/onboarding";
+        const onboardingDone = profile?.onboarding_completed_at != null;
+        const destination = onboardingDone ? next : "/onboarding";
         return NextResponse.redirect(`${origin}${destination}`);
       }
     }

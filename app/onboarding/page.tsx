@@ -115,10 +115,33 @@ export default function Onboarding() {
       if (supa) {
         const { data: { session } } = await supa.auth.getSession();
         if (session) {
-          // Upsert profile — works whether trigger created the row or not
+          // ── Upload avatar to Storage if one was chosen ────────────────────
+          let avatarUrl: string | null = null;
+          if (s.avatar && s.avatar.startsWith("data:")) {
+            try {
+              const blob = dataURLToBlob(s.avatar);
+              const ext = (blob.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
+              const path = `${session.user.id}/avatar.${ext}`;
+              const { error: uploadError } = await supa.storage
+                .from("avatars")
+                .upload(path, blob, { upsert: true, contentType: blob.type });
+              if (uploadError) {
+                console.error("Avatar upload error:", uploadError.message);
+              } else {
+                const { data } = supa.storage.from("avatars").getPublicUrl(path);
+                // Add a cache-buster so the new image shows immediately
+                avatarUrl = `${data.publicUrl}?v=${Date.now()}`;
+              }
+            } catch (e: any) {
+              console.error("Avatar conversion failed:", e?.message);
+            }
+          }
+
+          // ── Upsert profile (creates row if trigger didn't) ────────────────
           const { error: profileError } = await supa.from("profiles").upsert({
             id: session.user.id,
             alias: s.alias.trim(),
+            avatar_url: avatarUrl,
             pronouns: s.pronouns || null,
             descent: s.descent,
             languages: s.languages,
@@ -130,6 +153,7 @@ export default function Onboarding() {
             id_verified: true,       // auto-verified at onboarding completion
             accepts_tribe_requests: true,
             accepts_dms: true,
+            onboarding_completed_at: new Date().toISOString(),
           }, { onConflict: "id" });
 
           if (profileError) {
@@ -770,4 +794,20 @@ function StepDone({ s, onFinish, saving, saveErr }: {
       </div>
     </div>
   );
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+// Convert a base64 data URL (from FileReader.readAsDataURL) into a Blob
+// so it can be uploaded to Supabase Storage.
+function dataURLToBlob(dataURL: string): Blob {
+  const [header, base64] = dataURL.split(",");
+  const mimeMatch = header.match(/data:([^;]+);base64/);
+  const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mime });
 }
