@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useSession } from "@/lib/hooks/useSession";
 import { useUserPrompts } from "@/lib/hooks/useMyPrompts";
+import { useWallPosts } from "@/lib/hooks/useWallPosts";
+import { PostComposer } from "@/components/posts/PostComposer";
+import { PostCard } from "@/components/posts/PostCard";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
@@ -11,6 +14,7 @@ import { EyeOfHorus } from "@/components/motifs/Motifs";
 export default function MyPublicProfile() {
   const { userId, profile, loading } = useSession();
   const { data: prompts = [], isLoading: promptsLoading } = useUserPrompts(userId);
+  const { data: posts = [] } = useWallPosts(userId);
 
   if (loading) {
     return (
@@ -59,20 +63,32 @@ export default function MyPublicProfile() {
       </section>
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-6 mt-6">
-        {/* Wall — empty state until posts feature is built */}
+        {/* Wall */}
         <section>
           <header className="flex items-baseline justify-between">
             <h2 className="font-display text-2xl">Wall</h2>
-            <span className="text-xs text-ink3">0 posts</span>
+            <span className="text-xs text-ink3">
+              {posts.length} {posts.length === 1 ? "post" : "posts"}
+            </span>
           </header>
-          <div className="mt-3 surface p-6 text-center">
-            <p className="text-ink2 text-sm">
-              Your wall is empty. Share a thought, a quote, or a moment of your week — your Tribe will see it.
-            </p>
-            <Button variant="outline" size="sm" className="mt-3" disabled>
-              New post (coming soon)
-            </Button>
+
+          <div className="mt-3">
+            <PostComposer />
           </div>
+
+          {posts.length === 0 ? (
+            <div className="mt-4 surface p-6 text-center">
+              <p className="text-ink2 text-sm">
+                Your wall is empty. Share a thought above — your Tribe will see it.
+              </p>
+            </div>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {posts.map((p) => (
+                <PostCard key={p.id} post={p} canDelete />
+              ))}
+            </ul>
+          )}
         </section>
 
         <aside className="space-y-5">

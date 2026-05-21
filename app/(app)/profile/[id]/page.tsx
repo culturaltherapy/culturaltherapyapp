@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { useUserPrompts } from "@/lib/hooks/useMyPrompts";
+import { useWallPosts } from "@/lib/hooks/useWallPosts";
+import { PostCard } from "@/components/posts/PostCard";
 import { useSession } from "@/lib/hooks/useSession";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -18,6 +20,7 @@ export default function ViewProfile() {
   const { userId: currentUserId } = useSession();
   const { data: profile, isLoading } = useProfile(params.id);
   const { data: prompts = [] } = useUserPrompts(params.id);
+  const { data: posts = [] } = useWallPosts(params.id);
   const [inviteOpen, setInviteOpen] = React.useState(false);
 
   if (isLoading) {
@@ -89,6 +92,7 @@ export default function ViewProfile() {
 
       <section className="mt-6 grid lg:grid-cols-[1fr_320px] gap-6">
         <div className="space-y-4">
+          {/* Prompts */}
           {prompts.length > 0 ? (
             prompts.map((p) => (
               <div key={p.id} className="surface p-6">
@@ -99,6 +103,18 @@ export default function ViewProfile() {
           ) : (
             <div className="surface p-6 text-center">
               <p className="text-ink3 text-sm">This member hasn't answered any prompts yet.</p>
+            </div>
+          )}
+
+          {/* Wall — RLS hides posts the viewer shouldn't see */}
+          {posts.length > 0 && (
+            <div>
+              <h2 className="font-display text-2xl mb-3 mt-2">Wall</h2>
+              <ul className="space-y-3">
+                {posts.map((p) => (
+                  <PostCard key={p.id} post={p} canDelete={false} />
+                ))}
+              </ul>
             </div>
           )}
         </div>
