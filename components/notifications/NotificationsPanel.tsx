@@ -125,6 +125,10 @@ function describe(n: Notification): string {
       return `your request to join ${n.payload?.tribe_name ?? "the Tribe"} was accepted`;
     case "thread_reply":
       return `replied to your thread`;
+    case "connection_request":
+      return `wants to connect with you`;
+    case "connection_accepted":
+      return `accepted your connection request`;
     default:
       return "did something";
   }
@@ -139,6 +143,9 @@ function linkFor(n: Notification): string | null {
       return n.payload?.tribe_id ? `/tribes/${n.payload.tribe_id}` : "/tribes";
     case "thread_reply":
       return n.ref_id ? `/discussions/${n.ref_id}` : "/discussions";
+    case "connection_request":
+    case "connection_accepted":
+      return n.source_user_id ? `/profile/${n.source_user_id}` : null;
     default:
       return null;
   }

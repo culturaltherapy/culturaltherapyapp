@@ -17,6 +17,8 @@ import { Field, Input, Textarea, Select } from "@/components/ui/Field";
 import { Chip } from "@/components/ui/Chip";
 import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
+import { LanguagePicker } from "@/components/ui/LanguagePicker";
+import { validateMeaningful, validateShortLabel } from "@/lib/validation";
 
 type SectionKey =
   | "avatar"
@@ -326,26 +328,21 @@ function IdentityEditor({ userId, profile, onSaved }: { userId: string; profile:
 function RootsEditor({ userId, profile, onSaved }: { userId: string; profile: any; onSaved: () => void }) {
   const [descent, setDescent] = React.useState<string[]>(profile.descent ?? []);
   const [languages, setLanguages] = React.useState<string[]>(profile.languages ?? []);
-  const [showAllLangs, setShowAllLangs] = React.useState(false);
-  const [customLang, setCustomLang] = React.useState("");
+  const [languagesUnderstood, setLanguagesUnderstood] = React.useState<string[]>(
+    profile.languages_understood ?? []
+  );
 
   function toggle(arr: string[], v: string, setter: (a: string[]) => void) {
     setter(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
   }
 
-  function addCustomLang() {
-    const v = customLang.trim();
-    if (v.length < 2 || v.length > 40 || languages.includes(v)) return;
-    setLanguages([...languages, v]);
-    setCustomLang("");
-  }
-
-  const TOP_LANGS = LANGUAGE_OPTIONS.slice(0, 14);
-  const visibleLangs = showAllLangs ? LANGUAGE_OPTIONS : TOP_LANGS;
-  const customLangs = languages.filter((l) => !LANGUAGE_OPTIONS.includes(l));
-
   return (
-    <SaveForm userId={userId} patch={{ descent, languages }} onSaved={onSaved} disabled={descent.length === 0}>
+    <SaveForm
+      userId={userId}
+      patch={{ descent, languages, languages_understood: languagesUnderstood }}
+      onSaved={onSaved}
+      disabled={descent.length === 0}
+    >
       <Field label="Heritage / descent" required>
         <div className="flex flex-wrap gap-2">
           {DESCENT_OPTIONS.map((d) => (
@@ -355,44 +352,21 @@ function RootsEditor({ userId, profile, onSaved }: { userId: string; profile: an
           ))}
         </div>
       </Field>
-      <Field label="Languages" hint="Pick as many as you want, or add your own.">
-        {customLangs.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-2">
-            {customLangs.map((l) => (
-              <Chip key={l} as="button" active onClick={() => toggle(languages, l, setLanguages)}>
-                {l} ×
-              </Chip>
-            ))}
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2">
-          {visibleLangs.map((l) => (
-            <Chip key={l} as="button" active={languages.includes(l)} onClick={() => toggle(languages, l, setLanguages)}>
-              {l}
-            </Chip>
-          ))}
-        </div>
-        {!showAllLangs && (
-          <button
-            type="button"
-            onClick={() => setShowAllLangs(true)}
-            className="mt-3 text-sm text-terracotta hover:underline"
-          >
-            Show all languages ({LANGUAGE_OPTIONS.length - TOP_LANGS.length} more)
-          </button>
-        )}
-        <div className="mt-3 flex gap-2">
-          <Input
-            value={customLang}
-            onChange={(e) => setCustomLang(e.target.value)}
-            placeholder="Not listed? Add a language…"
-            maxLength={40}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomLang(); } }}
-          />
-          <Button size="sm" variant="outline" onClick={addCustomLang} disabled={customLang.trim().length < 2}>
-            Add
-          </Button>
-        </div>
+
+      <Field label="Languages you speak" hint="The ones you can hold a conversation in.">
+        <LanguagePicker
+          value={languages}
+          onChange={setLanguages}
+          placeholder="Type to search — e.g. Twi, Patois…"
+        />
+      </Field>
+
+      <Field label="Languages you understand (but don't speak)" hint="Languages you can follow even if you'd struggle to reply.">
+        <LanguagePicker
+          value={languagesUnderstood}
+          onChange={setLanguagesUnderstood}
+          placeholder="Type to search…"
+        />
       </Field>
     </SaveForm>
   );
@@ -503,17 +477,57 @@ function SocialLinksEditor({ userId, profile, onSaved }: { userId: string; profi
 
 function ExperienceEditor({ userId, profile, onSaved }: { userId: string; profile: any; onSaved: () => void }) {
   const [tags, setTags] = React.useState<string[]>(profile.experience_tags ?? []);
+  const [custom, setCustom] = React.useState("");
+  const [err, setErr] = React.useState<string | null>(null);
+
   function toggle(v: string) {
     setTags((cur) => cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]);
   }
+
+  function addCustom() {
+    const v = custom.trim();
+    const r = validateShortLabel(v, { min: 2, max: 40, label: "Tag" });
+    if (!r.ok) { setErr(r.reason); return; }
+    if (tags.some((t) => t.toLowerCase() === v.toLowerCase())) {
+      setErr("Already added."); return;
+    }
+    setErr(null);
+    setTags([...tags, v]);
+    setCustom("");
+  }
+
+  const customTags = tags.filter((t) => !experienceTagPool.includes(t));
+
   return (
     <SaveForm userId={userId} patch={{ experience_tags: tags }} onSaved={onSaved}>
       <Field label="Touchpoints" hint="Pick what you want a Tribe to recognise.">
+        {customTags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {customTags.map((t) => (
+              <Chip key={t} as="button" active onClick={() => toggle(t)}>{t} ×</Chip>
+            ))}
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           {experienceTagPool.map((t) => (
             <Chip key={t} as="button" active={tags.includes(t)} onClick={() => toggle(t)}>{t}</Chip>
           ))}
         </div>
+      </Field>
+      <Field label="Other (add your own)" hint="Something not listed? Add it as a tag.">
+        <div className="flex gap-2">
+          <Input
+            value={custom}
+            onChange={(e) => { setCustom(e.target.value); setErr(null); }}
+            placeholder="e.g. Adopted, Late-diagnosed ADHD, Returnee…"
+            maxLength={40}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }}
+          />
+          <Button size="sm" variant="outline" onClick={addCustom} disabled={custom.trim().length < 2}>
+            Add
+          </Button>
+        </div>
+        {err && <p className="mt-2 text-xs text-crisis">{err}</p>}
       </Field>
     </SaveForm>
   );
@@ -545,20 +559,64 @@ function DiagnosisEditor({ userId, profile, onSaved }: { userId: string; profile
 function ContactEditor({ userId, profile, onSaved }: { userId: string; profile: any; onSaved: () => void }) {
   const [tribe, setTribe] = React.useState(profile.accepts_tribe_requests !== false);
   const [dms, setDms] = React.useState(profile.accepts_dms !== false);
+  const [calls, setCalls] = React.useState(profile.accepts_calls === true);
+  const [video, setVideo] = React.useState(profile.accepts_video === true);
+  const isPeerSupporter = profile.is_peer_supporter === true;
+
   return (
     <SaveForm
       userId={userId}
-      patch={{ accepts_tribe_requests: tribe, accepts_dms: dms }}
+      patch={{
+        accepts_tribe_requests: tribe,
+        accepts_dms: dms,
+        accepts_calls: isPeerSupporter ? calls : false,
+        accepts_video: isPeerSupporter ? video : false,
+      }}
       onSaved={onSaved}
     >
-      <label className="flex items-center gap-2 text-sm text-ink2">
-        <input type="checkbox" checked={tribe} onChange={(e) => setTribe(e.target.checked)} className="accent-terracotta" />
-        Accept Tribe requests
-      </label>
-      <label className="flex items-center gap-2 text-sm text-ink2 mt-2">
-        <input type="checkbox" checked={dms} onChange={(e) => setDms(e.target.checked)} className="accent-terracotta" />
-        Accept direct messages
-      </label>
+      <div className="space-y-2">
+        <label className="flex items-center gap-2 text-sm text-ink2">
+          <input type="checkbox" checked={tribe} onChange={(e) => setTribe(e.target.checked)} className="accent-terracotta" />
+          Accept Tribe requests
+        </label>
+        <label className="flex items-center gap-2 text-sm text-ink2">
+          <input type="checkbox" checked={dms} onChange={(e) => setDms(e.target.checked)} className="accent-terracotta" />
+          Accept direct messages
+        </label>
+      </div>
+
+      <div className="mt-5 pt-4 border-t border-line">
+        <p className="eyebrow mb-2">Voice and video — peer-supporter only</p>
+        <p className="text-sm text-ink2 mb-3">
+          For safeguarding reasons, voice and video calls are only available
+          between members who've completed the Peer Support Academy. Phone numbers
+          and home addresses should never be shared in chat or calls — if you
+          spot someone sharing or asking for that, report it from the message
+          menu.
+        </p>
+
+        {!isPeerSupporter ? (
+          <div className="rounded-md bg-ochre/10 border border-ochre/30 px-3 py-3 text-sm">
+            <p className="text-ink2">
+              To turn these on, complete the{" "}
+              <Link href="/academy" className="text-terracotta hover:underline">Peer Support Academy</Link>.
+              Once you're accredited, you'll be able to accept voice and video
+              calls from members you've connected with.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm text-ink2">
+              <input type="checkbox" checked={calls} onChange={(e) => setCalls(e.target.checked)} className="accent-terracotta" />
+              Accept voice calls (from connected members)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-ink2">
+              <input type="checkbox" checked={video} onChange={(e) => setVideo(e.target.checked)} className="accent-terracotta" />
+              Accept video calls (from connected members)
+            </label>
+          </div>
+        )}
+      </div>
     </SaveForm>
   );
 }
@@ -595,7 +653,9 @@ function PromptsEditor({ userId, existing, onSaved }: {
     try {
       const supa = getSupabaseBrowser();
       if (!supa) throw new Error("Not configured");
-      const filled = drafts.filter((d) => d.answer.trim());
+      const filled = drafts.filter((d) =>
+        validateMeaningful(d.answer, { minChars: 8, minWords: 2 }).ok
+      );
 
       // Wipe and re-insert — keeps things simple and avoids stale prompts
       const { error: delError } = await supa.from("profile_prompts").delete().eq("user_id", userId);
@@ -637,15 +697,21 @@ function PromptsEditor({ userId, existing, onSaved }: {
               </button>
             )}
           </div>
-          <Field label="Your answer">
-            <Textarea
-              rows={2}
-              value={d.answer}
-              onChange={(e) => update(i, { answer: e.target.value })}
-              maxLength={280}
-              placeholder="Take your time."
-            />
-          </Field>
+          {(() => {
+            const hasText = d.answer.trim().length > 0;
+            const v = hasText ? validateMeaningful(d.answer, { minChars: 8, minWords: 2 }) : { ok: true as const };
+            return (
+              <Field label="Your answer" error={v.ok ? undefined : v.reason}>
+                <Textarea
+                  rows={2}
+                  value={d.answer}
+                  onChange={(e) => update(i, { answer: e.target.value })}
+                  maxLength={500}
+                  placeholder="Take your time."
+                />
+              </Field>
+            );
+          })()}
         </div>
       ))}
 

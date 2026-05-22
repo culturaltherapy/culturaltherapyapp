@@ -6,7 +6,9 @@ export type NotificationKind =
   | "tribe_request_received"
   | "tribe_invitation"
   | "tribe_accepted"
-  | "thread_reply";
+  | "thread_reply"
+  | "connection_request"
+  | "connection_accepted";
 
 export type Notification = {
   id: string;

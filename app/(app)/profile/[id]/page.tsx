@@ -14,14 +14,23 @@ import { Chip } from "@/components/ui/Chip";
 import { EyeOfHorus } from "@/components/motifs/Motifs";
 import { Icon } from "@/components/ui/Icon";
 import { InviteToTribeModal } from "@/components/tribes/InviteToTribeModal";
+import {
+  useConnectionWith,
+  useSendConnectionRequest,
+  useAcceptConnection,
+} from "@/lib/hooks/useConnections";
 
 export default function ViewProfile() {
   const params = useParams<{ id: string }>();
-  const { userId: currentUserId } = useSession();
+  const { userId: currentUserId, profile: myProfile } = useSession();
   const { data: profile, isLoading } = useProfile(params.id);
   const { data: prompts = [] } = useUserPrompts(params.id);
   const { data: posts = [] } = useWallPosts(params.id);
   const [inviteOpen, setInviteOpen] = React.useState(false);
+  const isOwnProfile = !!currentUserId && currentUserId === params.id;
+  const { data: connection } = useConnectionWith(isOwnProfile ? null : params.id);
+  const sendConnection = useSendConnectionRequest();
+  const acceptConnection = useAcceptConnection();
 
   if (isLoading) {
     return (
@@ -84,14 +93,45 @@ export default function ViewProfile() {
               {verified && <Chip className="border-forest text-forest">ID verified</Chip>}
             </div>
           </div>
-          <div className="flex gap-2">
-            {acceptsDms && currentUserId && currentUserId !== params.id && (
-              <Button variant="outline">Message</Button>
-            )}
-            {acceptsTribe && currentUserId && currentUserId !== params.id && (
-              <Button onClick={() => setInviteOpen(true)}>Send Tribe request</Button>
-            )}
-          </div>
+          {!isOwnProfile && currentUserId && (
+            <div className="flex flex-col items-stretch sm:items-end gap-2">
+              {/* Primary action — Connect */}
+              <ConnectAction
+                connection={connection}
+                pending={sendConnection.isPending || acceptConnection.isPending}
+                onSend={async () => {
+                  try {
+                    await sendConnection.mutateAsync({ recipientId: params.id });
+                  } catch (_) {}
+                }}
+                onAccept={async () => {
+                  if (connection?.id) {
+                    try { await acceptConnection.mutateAsync(connection.id); } catch (_) {}
+                  }
+                }}
+                alias={alias}
+              />
+
+              {/* Secondary — Invite to one of your tribes */}
+              {acceptsTribe && (
+                <button
+                  onClick={() => setInviteOpen(true)}
+                  className="text-xs text-terracotta hover:underline self-end"
+                >
+                  Invite {alias.split(" ")[0]} to one of your Tribes
+                </button>
+              )}
+
+              {/* Message — coming soon, intentionally disabled */}
+              <button
+                className="text-xs text-ink3 cursor-not-allowed self-end"
+                title="Direct messaging is coming soon"
+                disabled
+              >
+                Message · coming soon
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -169,5 +209,52 @@ export default function ViewProfile() {
         </aside>
       </section>
     </div>
+  );
+}
+
+function ConnectAction({
+  connection, onSend, onAccept, pending, alias,
+}: {
+  connection: any;
+  onSend: () => void;
+  onAccept: () => void;
+  pending: boolean;
+  alias: string;
+}) {
+  if (!connection) {
+    return (
+      <Button onClick={onSend} disabled={pending}>
+        {pending ? "Sending…" : `Connect with ${alias.split(" ")[0]}`}
+      </Button>
+    );
+  }
+
+  if (connection.status === "accepted") {
+    return (
+      <Button variant="outline" disabled>
+        ✓ Connected
+      </Button>
+    );
+  }
+
+  if (connection.status === "pending") {
+    if (connection.direction === "incoming") {
+      return (
+        <Button onClick={onAccept} disabled={pending}>
+          {pending ? "Accepting…" : `Accept ${alias.split(" ")[0]}'s request`}
+        </Button>
+      );
+    }
+    return (
+      <Button variant="outline" disabled>
+        ✓ Request sent
+      </Button>
+    );
+  }
+
+  return (
+    <Button onClick={onSend} disabled={pending}>
+      {pending ? "Sending…" : `Connect with ${alias.split(" ")[0]}`}
+    </Button>
   );
 }

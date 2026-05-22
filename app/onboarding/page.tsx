@@ -9,8 +9,10 @@ import { Field, Input, Textarea, Select } from "@/components/ui/Field";
 import { Chip } from "@/components/ui/Chip";
 import { Sankofa, Ubuntu, Pyramid, EyeOfHorus, Dwennimmen, Funtunfunefu } from "@/components/motifs/Motifs";
 import { Icon } from "@/components/ui/Icon";
-import { codeOfConduct, experienceTagPool, promptLibrary, LANGUAGE_OPTIONS } from "@/lib/mock-data";
+import { codeOfConduct, experienceTagPool, promptLibrary } from "@/lib/mock-data";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { LanguagePicker } from "@/components/ui/LanguagePicker";
+import { validateMeaningful, validateShortLabel } from "@/lib/validation";
 
 type State = {
   alias: string;
@@ -18,6 +20,7 @@ type State = {
   birthYear: string;          // kept as string for the input; parsed on save
   descent: string[];
   languages: string[];
+  languagesUnderstood: string[];
   country: string;
   city: string;
   shareCity: boolean;
@@ -61,6 +64,7 @@ export default function Onboarding() {
     birthYear: "",
     descent: [],
     languages: [],
+    languagesUnderstood: [],
     country: "GB",
     city: "",
     shareCity: true,
@@ -100,7 +104,7 @@ export default function Onboarding() {
       case 4:  return s.country.length >= 2;
       case 5:  return s.experienceTags.length >= 1;
       case 6:  return true;
-      case 7:  return s.prompts.filter((p) => p.answer.trim().length > 0).length >= 2;
+      case 7:  return s.prompts.filter((p) => validateMeaningful(p.answer, { minChars: 8, minWords: 2 }).ok).length >= 2;
       case 8:  return true;
       case 9:  return s.idStatus === "verified";
       case 10: return s.cocAccepted;
@@ -156,6 +160,7 @@ export default function Onboarding() {
             birth_year: parsedBirthYear,
             descent: s.descent,
             languages: s.languages,
+            languages_understood: s.languagesUnderstood,
             country: s.country,
             city: s.shareCity ? s.city || null : null,
             experience_tags: s.experienceTags,
@@ -174,8 +179,10 @@ export default function Onboarding() {
 
           // Save prompt answers. First clear any existing onboarding prompts
           // (so re-running onboarding doesn't pile up stale ones), then insert
-          // the current ones with the actual question text.
-          const filledPrompts = s.prompts.filter((p) => p.answer.trim());
+          // only the ones that pass meaningfulness validation.
+          const filledPrompts = s.prompts.filter((p) =>
+            validateMeaningful(p.answer, { minChars: 8, minWords: 2 }).ok
+          );
           await supa.from("profile_prompts")
             .delete()
             .eq("user_id", session.user.id);
@@ -517,22 +524,6 @@ function StepRoots({ s, patch }: { s: State; patch: (p: Partial<State>) => void 
   }
   const descents = ["Ghanaian","Nigerian","Jamaican","Trinidadian","Kenyan","Zimbabwean","South African","Ethiopian","Somali","Sudanese","Senegalese","British","American","Brazilian","Other"];
 
-  const [showAllLangs, setShowAllLangs] = React.useState(false);
-  const [customLang, setCustomLang] = React.useState("");
-
-  // Common languages always shown; the rest hidden under "Show more"
-  const TOP_LANGS = LANGUAGE_OPTIONS.slice(0, 14);
-  const REST_LANGS = LANGUAGE_OPTIONS.slice(14);
-  const visibleLangs = showAllLangs ? LANGUAGE_OPTIONS : TOP_LANGS;
-
-  function addCustomLang() {
-    const v = customLang.trim();
-    if (v.length < 2 || v.length > 40) return;
-    if (s.languages.includes(v)) return;
-    patch({ languages: [...s.languages, v] });
-    setCustomLang("");
-  }
-
   return (
     <div>
       <div className="text-forest mb-3"><Ubuntu size={48} /></div>
@@ -547,50 +538,24 @@ function StepRoots({ s, patch }: { s: State; patch: (p: Partial<State>) => void 
         </div>
       </Field>
 
+      <div className="h-6" />
+
+      <Field label="Languages you speak" hint="The ones you can hold a conversation in.">
+        <LanguagePicker
+          value={s.languages}
+          onChange={(v) => patch({ languages: v })}
+          placeholder="Type to search — e.g. Twi, Patois, Arabic…"
+        />
+      </Field>
+
       <div className="h-5" />
 
-      <Field label="Languages you carry" hint="Pick as many as you want, or add your own.">
-        {/* Already-selected custom languages that aren't in the option list */}
-        {s.languages.filter((l) => !LANGUAGE_OPTIONS.includes(l)).length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-2">
-            {s.languages.filter((l) => !LANGUAGE_OPTIONS.includes(l)).map((l) => (
-              <Chip key={l} as="button" active onClick={() => patch({ languages: toggle(s.languages, l) })}>
-                {l} ×
-              </Chip>
-            ))}
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-2">
-          {visibleLangs.map((l) => (
-            <Chip key={l} as="button" active={s.languages.includes(l)} onClick={() => patch({ languages: toggle(s.languages, l) })}>
-              {l}
-            </Chip>
-          ))}
-        </div>
-
-        {!showAllLangs && (
-          <button
-            type="button"
-            onClick={() => setShowAllLangs(true)}
-            className="mt-3 text-sm text-terracotta hover:underline"
-          >
-            Show all languages ({REST_LANGS.length} more)
-          </button>
-        )}
-
-        <div className="mt-4 flex gap-2">
-          <Input
-            value={customLang}
-            onChange={(e) => setCustomLang(e.target.value)}
-            placeholder="Not listed? Add a language…"
-            maxLength={40}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomLang(); } }}
-          />
-          <Button size="sm" variant="outline" onClick={addCustomLang} disabled={customLang.trim().length < 2}>
-            Add
-          </Button>
-        </div>
+      <Field label="Languages you understand (but don't speak)" hint="Languages you can follow even if you'd struggle to reply.">
+        <LanguagePicker
+          value={s.languagesUnderstood}
+          onChange={(v) => patch({ languagesUnderstood: v })}
+          placeholder="Type to search…"
+        />
       </Field>
     </div>
   );
@@ -636,6 +601,9 @@ function StepLocation({ s, patch }: { s: State; patch: (p: Partial<State>) => vo
 }
 
 function StepExperience({ s, patch }: { s: State; patch: (p: Partial<State>) => void }) {
+  const [custom, setCustom] = React.useState("");
+  const [err, setErr] = React.useState<string | null>(null);
+
   function toggle(v: string) {
     patch({
       experienceTags: s.experienceTags.includes(v)
@@ -643,6 +611,24 @@ function StepExperience({ s, patch }: { s: State; patch: (p: Partial<State>) => 
         : [...s.experienceTags, v]
     });
   }
+
+  function addCustom() {
+    const v = custom.trim();
+    const result = validateShortLabel(v, { min: 2, max: 40, label: "Tag" });
+    if (!result.ok) { setErr(result.reason); return; }
+    if (s.experienceTags.some((t) => t.toLowerCase() === v.toLowerCase())) {
+      setErr("Already added."); return;
+    }
+    setErr(null);
+    patch({ experienceTags: [...s.experienceTags, v] });
+    setCustom("");
+  }
+
+  // Tags that aren't in the predefined pool (user-added)
+  const customTags = s.experienceTags.filter(
+    (t) => !experienceTagPool.includes(t)
+  );
+
   return (
     <div>
       <div className="text-terracotta mb-3"><Sankofa size={48} /></div>
@@ -651,10 +637,42 @@ function StepExperience({ s, patch }: { s: State; patch: (p: Partial<State>) => 
         title="Choose what you'd like a Tribe to recognise."
         body="Pick at least one. These are touchpoints, not diagnoses."
       />
+
+      {customTags.length > 0 && (
+        <div className="mb-3">
+          <p className="eyebrow mb-2">Your own</p>
+          <div className="flex flex-wrap gap-2">
+            {customTags.map((t) => (
+              <Chip key={t} as="button" active onClick={() => toggle(t)}>
+                {t} <span className="ml-1 opacity-70">×</span>
+              </Chip>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {experienceTagPool.map((t) => (
           <Chip key={t} as="button" active={s.experienceTags.includes(t)} onClick={() => toggle(t)}>{t}</Chip>
         ))}
+      </div>
+
+      <div className="mt-5">
+        <Field label="Other (add your own)" hint="Something not listed? Add it as a tag.">
+          <div className="flex gap-2">
+            <Input
+              value={custom}
+              onChange={(e) => { setCustom(e.target.value); setErr(null); }}
+              placeholder="e.g. Adopted, Late-diagnosed ADHD, Returnee…"
+              maxLength={40}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }}
+            />
+            <Button size="sm" variant="outline" onClick={addCustom} disabled={custom.trim().length < 2}>
+              Add
+            </Button>
+          </div>
+        </Field>
+        {err && <p className="mt-2 text-sm text-crisis">{err}</p>}
       </div>
     </div>
   );
@@ -702,7 +720,9 @@ function StepPrompts({ s, patch }: { s: State; patch: (p: Partial<State>) => voi
     patch({ prompts: next });
   }
   function get(q: string) { return s.prompts.find((p) => p.question === q)?.answer ?? ""; }
-  const answered = s.prompts.filter((p) => p.answer.trim()).length;
+  const answered = s.prompts.filter((p) =>
+    validateMeaningful(p.answer, { minChars: 8, minWords: 2 }).ok
+  ).length;
 
   return (
     <div>
@@ -718,24 +738,31 @@ function StepPrompts({ s, patch }: { s: State; patch: (p: Partial<State>) => voi
           <div key={g.title}>
             <p className="eyebrow mb-3">{g.title}</p>
             <div className="space-y-4">
-              {g.prompts.map((q) => (
-                <Field key={q} label={q}>
-                  <Textarea
-                    rows={2}
-                    value={get(q)}
-                    onChange={(e) => setAnswer(q, e.target.value)}
-                    placeholder="Take your time. Skip if it doesn't fit."
-                    maxLength={500}
-                  />
-                </Field>
-              ))}
+              {g.prompts.map((q) => {
+                const answer = get(q);
+                const hasText = answer.trim().length > 0;
+                const validation = hasText
+                  ? validateMeaningful(answer, { minChars: 8, minWords: 2 })
+                  : { ok: true as const };
+                return (
+                  <Field key={q} label={q} error={validation.ok ? undefined : validation.reason}>
+                    <Textarea
+                      rows={2}
+                      value={answer}
+                      onChange={(e) => setAnswer(q, e.target.value)}
+                      placeholder="Take your time. Skip if it doesn't fit."
+                      maxLength={500}
+                    />
+                  </Field>
+                );
+              })}
             </div>
           </div>
         ))}
       </div>
 
       <p className="mt-4 text-xs text-ink3 sticky bottom-2 bg-parchment/90 rounded-md py-1 px-2 inline-block">
-        {answered} answered · 2 required to continue
+        {answered} meaningful answer{answered === 1 ? "" : "s"} · 2 required to continue
       </p>
     </div>
   );
