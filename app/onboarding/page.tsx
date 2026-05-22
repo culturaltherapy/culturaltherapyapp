@@ -15,9 +15,11 @@ import { LanguagePicker } from "@/components/ui/LanguagePicker";
 import { validateMeaningful, validateShortLabel } from "@/lib/validation";
 
 type State = {
-  alias: string;
+  realName: string;
+  alias: string;              // public username
   pronouns: string;
   birthYear: string;          // kept as string for the input; parsed on save
+  bio: string;
   descent: string[];
   languages: string[];
   languagesUnderstood: string[];
@@ -59,9 +61,11 @@ export default function Onboarding() {
   const [sessionEmail, setSessionEmail] = React.useState<string | null>(null);
   const [authChecked, setAuthChecked] = React.useState(false);
   const [s, setS] = React.useState<State>({
+    realName: "",
     alias: "",
     pronouns: "",
     birthYear: "",
+    bio: "",
     descent: [],
     languages: [],
     languagesUnderstood: [],
@@ -99,7 +103,10 @@ export default function Onboarding() {
     switch (step) {
       case 0:  return false; // step 0 navigates itself on auth success
       case 1:  return true;
-      case 2:  return s.alias.trim().length >= 2;
+      case 2:  return (
+        validateShortLabel(s.realName, { min: 2, max: 80, label: "Real name" }).ok
+        && validateShortLabel(s.alias, { min: 2, max: 24, label: "Username" }).ok
+      );
       case 3:  return s.descent.length > 0;
       case 4:  return s.country.length >= 2;
       case 5:  return s.experienceTags.length >= 1;
@@ -152,11 +159,18 @@ export default function Onboarding() {
           })();
 
           // ── Upsert profile (creates row if trigger didn't) ────────────────
+          const bioTrimmed = s.bio.trim();
+          const bioValidation = bioTrimmed.length === 0
+            ? { ok: true as const }
+            : validateMeaningful(bioTrimmed, { minChars: 30, minWords: 8 });
+
           const { error: profileError } = await supa.from("profiles").upsert({
             id: session.user.id,
+            real_name: s.realName.trim() || null,
             alias: s.alias.trim(),
             avatar_url: avatarUrl,
             pronouns: s.pronouns || null,
+            bio: bioValidation.ok && bioTrimmed.length > 0 ? bioTrimmed : null,
             birth_year: parsedBirthYear,
             descent: s.descent,
             languages: s.languages,
@@ -478,23 +492,47 @@ function StepWelcome() {
 
 function StepIdentity({ s, patch }: { s: State; patch: (p: Partial<State>) => void }) {
   const thisYear = new Date().getFullYear();
+
+  const realNameValid = s.realName.trim().length === 0
+    ? { ok: true as const }
+    : validateShortLabel(s.realName, { min: 2, max: 80, label: "Real name" });
+
+  const usernameValid = s.alias.trim().length === 0
+    ? { ok: true as const }
+    : validateShortLabel(s.alias, { min: 2, max: 24, label: "Username" });
+
+  const bioValid = s.bio.trim().length === 0
+    ? { ok: true as const }
+    : validateMeaningful(s.bio, { minChars: 30, minWords: 8, label: "Bio" });
+
   return (
     <div>
       <StepHeader
         kicker="Step 2 · Identity"
-        title="What should we call you?"
-        body="Your alias is what other members see. Use whatever feels yours — a first name, a nickname, an initial."
+        title="Who are you, really?"
+        body="Your real name is for our records only — it's never shown publicly. Your username is what other members see."
       />
       <div className="space-y-5">
-        <Field label="Alias" required hint="2–24 characters">
+        <Field label="Real name" required hint="Private — only Cultural Therapy admins can see this. Used for safeguarding." error={realNameValid.ok ? undefined : realNameValid.reason}>
+          <Input
+            value={s.realName}
+            onChange={(e) => patch({ realName: e.target.value })}
+            placeholder="e.g. Gerald Bonsu"
+            autoComplete="name"
+            maxLength={80}
+          />
+        </Field>
+
+        <Field label="Username" required hint="Public — 2–24 characters. This is what others will see." error={usernameValid.ok ? undefined : usernameValid.reason}>
           <Input
             value={s.alias}
             onChange={(e) => patch({ alias: e.target.value })}
-            placeholder="e.g. Yaa O."
+            placeholder="e.g. yaa.o or Yaa O."
             autoComplete="nickname"
             maxLength={24}
           />
         </Field>
+
         <Field label="Pronouns (optional)">
           <Input
             value={s.pronouns}
@@ -502,6 +540,7 @@ function StepIdentity({ s, patch }: { s: State; patch: (p: Partial<State>) => vo
             placeholder="she/her, they/them, etc."
           />
         </Field>
+
         <Field label="Year of birth (optional)" hint="We display age, not date. You can hide this later in profile settings.">
           <Input
             type="number"
@@ -512,6 +551,21 @@ function StepIdentity({ s, patch }: { s: State; patch: (p: Partial<State>) => vo
             min={1900}
             max={thisYear}
           />
+        </Field>
+
+        <Field
+          label="Short bio (optional)"
+          hint="A few sentences about who you are. 30–400 characters."
+          error={bioValid.ok ? undefined : bioValid.reason}
+        >
+          <Textarea
+            rows={4}
+            value={s.bio}
+            onChange={(e) => patch({ bio: e.target.value })}
+            placeholder="e.g. Therapist-in-training, second-gen Ghanaian, still figuring out home. Sundays are sacred."
+            maxLength={400}
+          />
+          <div className="mt-1 text-xs text-ink3 text-right">{s.bio.length}/400</div>
         </Field>
       </div>
     </div>

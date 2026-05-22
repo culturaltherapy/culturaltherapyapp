@@ -23,6 +23,7 @@ import { validateMeaningful, validateShortLabel } from "@/lib/validation";
 type SectionKey =
   | "avatar"
   | "identity"
+  | "bio"
   | "roots"
   | "experience"
   | "diagnosis"
@@ -113,7 +114,7 @@ export default function EditProfile() {
         <SectionCard
           title="Identity"
           summary={[
-            profile.alias,
+            profile.alias && `@${profile.alias}`,
             (profile as any).pronouns,
             (profile as any).birth_year ? `${new Date().getFullYear() - (profile as any).birth_year}` : null,
             [profile.city, profile.country].filter(Boolean).join(", "),
@@ -122,6 +123,19 @@ export default function EditProfile() {
           onToggle={() => toggle("identity")}
         >
           <IdentityEditor userId={userId} profile={profile} onSaved={reload} />
+        </SectionCard>
+
+        <SectionCard
+          title="Biography"
+          summary={
+            (profile as any).bio
+              ? `${(profile as any).bio.slice(0, 60)}${(profile as any).bio.length > 60 ? "…" : ""}`
+              : "Not set yet — add a few sentences about who you are."
+          }
+          open={openSection === "bio"}
+          onToggle={() => toggle("bio")}
+        >
+          <BioEditor userId={userId} profile={profile} onSaved={reload} />
         </SectionCard>
 
         <SectionCard
@@ -270,6 +284,7 @@ function AvatarEditor({ userId, profile, onSaved }: { userId: string; profile: a
 
 function IdentityEditor({ userId, profile, onSaved }: { userId: string; profile: any; onSaved: () => void }) {
   const thisYear = new Date().getFullYear();
+  const [realName, setRealName] = React.useState(profile.real_name ?? "");
   const [alias, setAlias] = React.useState(profile.alias ?? "");
   const [pronouns, setPronouns] = React.useState(profile.pronouns ?? "");
   const [birthYear, setBirthYear] = React.useState<string>(
@@ -283,10 +298,15 @@ function IdentityEditor({ userId, profile, onSaved }: { userId: string; profile:
     return Number.isFinite(n) && n >= 1900 && n <= thisYear ? n : null;
   })();
 
+  const realNameValid = validateShortLabel(realName, { min: 2, max: 80, label: "Real name" });
+  const usernameValid = validateShortLabel(alias, { min: 2, max: 24, label: "Username" });
+  const canSave = realNameValid.ok && usernameValid.ok;
+
   return (
     <SaveForm
       userId={userId}
       patch={{
+        real_name: realName.trim(),
         alias: alias.trim(),
         pronouns: pronouns.trim() || null,
         birth_year: parsedBirthYear,
@@ -294,10 +314,29 @@ function IdentityEditor({ userId, profile, onSaved }: { userId: string; profile:
         city: city.trim() || null,
       }}
       onSaved={onSaved}
-      disabled={alias.trim().length < 2}
+      disabled={!canSave}
     >
-      <Field label="Alias" required>
-        <Input value={alias} onChange={(e) => setAlias(e.target.value)} maxLength={24} />
+      <Field
+        label="Real name"
+        required
+        hint="Private — only admins can see this. Used for safeguarding."
+        error={realName.trim().length === 0 || realNameValid.ok ? undefined : realNameValid.reason}
+      >
+        <Input
+          value={realName}
+          onChange={(e) => setRealName(e.target.value)}
+          maxLength={80}
+          autoComplete="name"
+          placeholder="e.g. Gerald Bonsu"
+        />
+      </Field>
+      <Field
+        label="Username"
+        required
+        hint="Public — this is what others see."
+        error={alias.trim().length === 0 || usernameValid.ok ? undefined : usernameValid.reason}
+      >
+        <Input value={alias} onChange={(e) => setAlias(e.target.value)} maxLength={24} placeholder="e.g. yaa.o" />
       </Field>
       <Field label="Pronouns (optional)">
         <Input value={pronouns} onChange={(e) => setPronouns(e.target.value)} />
@@ -320,6 +359,39 @@ function IdentityEditor({ userId, profile, onSaved }: { userId: string; profile:
       </Field>
       <Field label="City (optional)">
         <Input value={city} onChange={(e) => setCity(e.target.value)} />
+      </Field>
+    </SaveForm>
+  );
+}
+
+function BioEditor({ userId, profile, onSaved }: { userId: string; profile: any; onSaved: () => void }) {
+  const [bio, setBio] = React.useState<string>(profile.bio ?? "");
+
+  const trimmed = bio.trim();
+  const validation = trimmed.length === 0
+    ? { ok: true as const }
+    : validateMeaningful(trimmed, { minChars: 30, minWords: 8, label: "Bio" });
+
+  return (
+    <SaveForm
+      userId={userId}
+      patch={{ bio: trimmed.length === 0 ? null : trimmed }}
+      onSaved={onSaved}
+      disabled={!validation.ok}
+    >
+      <Field
+        label="A few sentences about you"
+        hint="30–400 characters. This is the first thing people read on your profile."
+        error={validation.ok ? undefined : validation.reason}
+      >
+        <Textarea
+          rows={5}
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          maxLength={400}
+          placeholder="e.g. Therapist-in-training, second-gen Ghanaian, still figuring out home. Sundays are sacred."
+        />
+        <div className="mt-1 text-xs text-ink3 text-right">{bio.length}/400</div>
       </Field>
     </SaveForm>
   );
@@ -561,6 +633,9 @@ function ContactEditor({ userId, profile, onSaved }: { userId: string; profile: 
   const [dms, setDms] = React.useState(profile.accepts_dms !== false);
   const [calls, setCalls] = React.useState(profile.accepts_calls === true);
   const [video, setVideo] = React.useState(profile.accepts_video === true);
+  const [visibility, setVisibility] = React.useState<"public" | "tribe" | "private">(
+    (profile.connections_visibility ?? "tribe") as any,
+  );
   const isPeerSupporter = profile.is_peer_supporter === true;
 
   return (
@@ -571,6 +646,7 @@ function ContactEditor({ userId, profile, onSaved }: { userId: string; profile: 
         accepts_dms: dms,
         accepts_calls: isPeerSupporter ? calls : false,
         accepts_video: isPeerSupporter ? video : false,
+        connections_visibility: visibility,
       }}
       onSaved={onSaved}
     >
@@ -581,8 +657,32 @@ function ContactEditor({ userId, profile, onSaved }: { userId: string; profile: 
         </label>
         <label className="flex items-center gap-2 text-sm text-ink2">
           <input type="checkbox" checked={dms} onChange={(e) => setDms(e.target.checked)} className="accent-terracotta" />
-          Accept direct messages
+          Accept direct messages from connections
         </label>
+      </div>
+
+      <div className="mt-5 pt-4 border-t border-line">
+        <p className="eyebrow mb-2">Connections privacy</p>
+        <p className="text-sm text-ink2 mb-2">Who can see the list of people you're connected to?</p>
+        <div className="space-y-2">
+          {[
+            { value: "public",  label: "Public — anyone signed in" },
+            { value: "tribe",   label: "Members of my Tribes only" },
+            { value: "private", label: "Only me" },
+          ].map((opt) => (
+            <label key={opt.value} className="flex items-center gap-2 text-sm text-ink2">
+              <input
+                type="radio"
+                name="connections_visibility"
+                value={opt.value}
+                checked={visibility === opt.value}
+                onChange={() => setVisibility(opt.value as any)}
+                className="accent-terracotta"
+              />
+              {opt.label}
+            </label>
+          ))}
+        </div>
       </div>
 
       <div className="mt-5 pt-4 border-t border-line">

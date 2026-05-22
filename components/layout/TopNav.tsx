@@ -12,11 +12,12 @@ import { useUnreadCount } from "@/lib/hooks/useNotifications";
 import { NotificationsPanel } from "@/components/notifications/NotificationsPanel";
 
 const navItems = [
-  { href: "/home", label: "Home" },
-  { href: "/network", label: "Lived Experience" },
-  { href: "/academy", label: "Academy" },
+  { href: "/home",        label: "Home" },
+  { href: "/network",     label: "Lived Experience" },
+  { href: "/connections", label: "My Connections" },
+  { href: "/tribes",      label: "My Tribe" },
   { href: "/discussions", label: "Discussions" },
-  { href: "/tribes", label: "My Tribe" }
+  { href: "/academy",     label: "Academy" },
 ];
 
 export function TopNav() {

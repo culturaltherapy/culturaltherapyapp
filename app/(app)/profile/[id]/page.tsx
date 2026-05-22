@@ -52,6 +52,7 @@ export default function ViewProfile() {
   }
 
   const alias = (profile as any).alias ?? "Member";
+  const bio: string | null = (profile as any).bio ?? null;
   const city = (profile as any).city ?? "";
   const country = (profile as any).country ?? "";
   const descent: string[] = (profile as any).descent ?? [];
@@ -134,6 +135,13 @@ export default function ViewProfile() {
           )}
         </div>
       </section>
+
+      {bio && (
+        <section className="surface p-5 sm:p-6 mt-4">
+          <p className="eyebrow mb-2">About</p>
+          <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{bio}</p>
+        </section>
+      )}
 
       <section className="mt-6 grid lg:grid-cols-[1fr_320px] gap-6">
         <div className="space-y-4">

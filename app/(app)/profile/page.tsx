@@ -25,6 +25,7 @@ export default function MyPublicProfile() {
   }
 
   const alias = profile?.alias ?? "Friend";
+  const bio: string | null = (profile as any)?.bio ?? null;
   const city = profile?.city ?? "";
   const country = profile?.country ?? "";
   const descent: string[] = (profile as any)?.descent ?? [];
@@ -66,6 +67,13 @@ export default function MyPublicProfile() {
           </div>
         </div>
       </section>
+
+      {bio && (
+        <section className="surface p-5 sm:p-6 mt-4">
+          <p className="eyebrow mb-2">About</p>
+          <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{bio}</p>
+        </section>
+      )}
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-6 mt-6">
         {/* Wall */}
