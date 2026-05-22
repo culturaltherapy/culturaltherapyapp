@@ -164,9 +164,16 @@ export default function Onboarding() {
             ? { ok: true as const }
             : validateMeaningful(bioTrimmed, { minChars: 30, minWords: 8 });
 
+          // Save real_name to the restricted profiles_private table
+          if (s.realName.trim().length > 0) {
+            await (supa as any).from("profiles_private").upsert(
+              { user_id: session.user.id, real_name: s.realName.trim() },
+              { onConflict: "user_id" }
+            );
+          }
+
           const { error: profileError } = await supa.from("profiles").upsert({
             id: session.user.id,
-            real_name: s.realName.trim() || null,
             alias: s.alias.trim(),
             avatar_url: avatarUrl,
             pronouns: s.pronouns || null,

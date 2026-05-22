@@ -129,6 +129,12 @@ function describe(n: Notification): string {
       return `wants to connect with you`;
     case "connection_accepted":
       return `accepted your connection request`;
+    case "direct_message":
+      return `sent you a message`;
+    case "post_comment":
+      return `commented on your wall post`;
+    case "post_like":
+      return `liked your wall post`;
     default:
       return "did something";
   }
@@ -146,6 +152,12 @@ function linkFor(n: Notification): string | null {
     case "connection_request":
     case "connection_accepted":
       return n.source_user_id ? `/profile/${n.source_user_id}` : null;
+    case "direct_message":
+      return n.ref_id ? `/messages/${n.ref_id}` : "/messages";
+    case "post_comment":
+    case "post_like":
+      // Wall posts are shown on the owner's profile; route to /profile
+      return "/profile?tab=wall";
     default:
       return null;
   }

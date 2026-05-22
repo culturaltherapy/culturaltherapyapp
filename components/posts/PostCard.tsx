@@ -1,7 +1,19 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useDeletePost, type WallPost } from "@/lib/hooks/useWallPosts";
+import {
+  usePostInteractions,
+  useLikePost,
+  useUnlikePost,
+  usePostComments,
+  useAddComment,
+  useDeleteComment,
+} from "@/lib/hooks/usePostInteractions";
+import { useSession } from "@/lib/hooks/useSession";
+import { Avatar } from "@/components/ui/Avatar";
+import { Button } from "@/components/ui/Button";
 import { timeAgo } from "@/lib/utils";
 
 const VIS_LABEL: Record<WallPost["visibility"], string> = {
@@ -14,16 +26,28 @@ const VIS_LABEL: Record<WallPost["visibility"], string> = {
 export function PostCard({ post, canDelete }: { post: WallPost; canDelete: boolean }) {
   const del = useDeletePost();
   const [confirming, setConfirming] = React.useState(false);
+  const [showComments, setShowComments] = React.useState(false);
+
+  const { data: interactions } = usePostInteractions(post.id);
+  const like = useLikePost();
+  const unlike = useUnlikePost();
+
+  const likeCount = interactions?.likeCount ?? 0;
+  const commentCount = interactions?.commentCount ?? 0;
+  const iLiked = interactions?.iLiked ?? false;
 
   async function handleDelete() {
     if (!confirming) { setConfirming(true); return; }
     try {
       await del.mutateAsync(post.id);
-    } catch (_) {
-      // surfaced via optimistic UI later; for now silent
-    } finally {
+    } catch (_) {} finally {
       setConfirming(false);
     }
+  }
+
+  function toggleLike() {
+    if (iLiked) unlike.mutate(post.id);
+    else like.mutate(post.id);
   }
 
   return (
@@ -33,17 +57,135 @@ export function PostCard({ post, canDelete }: { post: WallPost; canDelete: boole
         <span className="font-mono uppercase">{VIS_LABEL[post.visibility]}</span>
       </div>
       <p className="mt-2 text-[15px] leading-relaxed whitespace-pre-wrap">{post.body}</p>
-      {canDelete && (
-        <div className="mt-3 flex justify-end">
+
+      {/* Action row */}
+      <div className="mt-3 pt-3 border-t border-line flex items-center gap-4 text-sm">
+        <button
+          onClick={toggleLike}
+          disabled={like.isPending || unlike.isPending}
+          className={`inline-flex items-center gap-1.5 transition ${
+            iLiked ? "text-terracotta" : "text-ink3 hover:text-ink"
+          }`}
+          aria-label={iLiked ? "Unlike" : "Like"}
+        >
+          <span aria-hidden>{iLiked ? "♥" : "♡"}</span>
+          <span className="text-xs font-mono">{likeCount}</span>
+        </button>
+
+        <button
+          onClick={() => setShowComments((v) => !v)}
+          className="inline-flex items-center gap-1.5 text-ink3 hover:text-ink transition"
+        >
+          <span aria-hidden>💬</span>
+          <span className="text-xs font-mono">{commentCount}</span>
+          <span className="text-xs">{commentCount === 1 ? "comment" : "comments"}</span>
+        </button>
+
+        {canDelete && (
           <button
             onClick={handleDelete}
             disabled={del.isPending}
-            className={`text-xs ${confirming ? "text-crisis font-medium" : "text-ink3"} hover:text-crisis`}
+            className={`ml-auto text-xs ${confirming ? "text-crisis font-medium" : "text-ink3"} hover:text-crisis`}
           >
             {del.isPending ? "Deleting…" : confirming ? "Tap again to confirm delete" : "Delete"}
           </button>
+        )}
+      </div>
+
+      {/* Comments section */}
+      {showComments && <PostComments postId={post.id} />}
+    </li>
+  );
+}
+
+function PostComments({ postId }: { postId: string }) {
+  const { userId } = useSession();
+  const { data: comments = [], isLoading } = usePostComments(postId);
+  const add = useAddComment();
+  const del = useDeleteComment();
+  const [draft, setDraft] = React.useState("");
+  const [confirming, setConfirming] = React.useState<string | null>(null);
+
+  async function submit() {
+    if (!draft.trim()) return;
+    try {
+      await add.mutateAsync({ postId, body: draft.trim() });
+      setDraft("");
+    } catch (e: any) {
+      // Surface as alert for simplicity
+      alert(e?.message ?? "Couldn't post comment.");
+    }
+  }
+
+  async function remove(id: string) {
+    if (confirming !== id) { setConfirming(id); return; }
+    try {
+      await del.mutateAsync({ commentId: id, postId });
+    } catch (_) {} finally {
+      setConfirming(null);
+    }
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-line">
+      {isLoading ? (
+        <p className="text-xs text-ink3">Loading comments…</p>
+      ) : comments.length === 0 ? (
+        <p className="text-xs text-ink3">No comments yet — be the first.</p>
+      ) : (
+        <ul className="space-y-3">
+          {comments.map((c) => (
+            <li key={c.id} className="flex gap-2.5">
+              <Link href={`/profile/${c.author_id}`} className="shrink-0">
+                <Avatar
+                  name={c.author?.alias ?? "Member"}
+                  src={c.author?.avatar_url}
+                  size={28}
+                />
+              </Link>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2 text-xs text-ink3">
+                  <Link href={`/profile/${c.author_id}`} className="text-ink hover:underline font-medium">
+                    {c.author?.alias ?? "Member"}
+                  </Link>
+                  <span>{timeAgo(c.created_at)}</span>
+                  {c.author_id === userId && (
+                    <button
+                      onClick={() => remove(c.id)}
+                      className={`ml-auto ${confirming === c.id ? "text-crisis font-medium" : "text-ink3"} hover:text-crisis`}
+                    >
+                      {confirming === c.id ? "tap again" : "delete"}
+                    </button>
+                  )}
+                </div>
+                <p className="text-sm mt-0.5 whitespace-pre-wrap">{c.body}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {userId && (
+        <div className="mt-3 flex items-end gap-2">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Write a comment…"
+            rows={1}
+            maxLength={1000}
+            className="flex-1 rounded-md border border-line bg-bone px-3 py-2 text-sm placeholder:text-ink3 outline-none focus:border-terracotta resize-none"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                submit();
+              }
+            }}
+          />
+          <Button size="sm" onClick={submit} disabled={add.isPending || !draft.trim()}>
+            {add.isPending ? "…" : "Post"}
+          </Button>
         </div>
       )}
-    </li>
+    </div>
   );
 }

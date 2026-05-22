@@ -22,6 +22,7 @@ import { validateMeaningful, validateShortLabel } from "@/lib/validation";
 import { useProfileMedia } from "@/lib/hooks/useProfileMedia";
 import { MediaUploader } from "@/components/media/MediaUploader";
 import { MediaGallery } from "@/components/media/MediaGallery";
+import { useMyPrivateProfile, useUpdatePrivateProfile } from "@/lib/hooks/usePrivateProfile";
 
 type SectionKey =
   | "avatar"
@@ -122,7 +123,7 @@ export default function EditProfile() {
           summary={[
             profile.alias && `@${profile.alias}`,
             (profile as any).pronouns,
-            (profile as any).birth_year ? `${new Date().getFullYear() - (profile as any).birth_year}` : null,
+            (profile as any).birth_year ? `Age ${new Date().getFullYear() - (profile as any).birth_year}` : null,
             [profile.city, profile.country].filter(Boolean).join(", "),
           ].filter(Boolean).join(" · ")}
           open={openSection === "identity"}
@@ -307,7 +308,14 @@ function AvatarEditor({ userId, profile, onSaved }: { userId: string; profile: a
 
 function IdentityEditor({ userId, profile, onSaved }: { userId: string; profile: any; onSaved: () => void }) {
   const thisYear = new Date().getFullYear();
-  const [realName, setRealName] = React.useState(profile.real_name ?? "");
+  const { data: priv } = useMyPrivateProfile();
+  const updatePrivate = useUpdatePrivateProfile();
+
+  const [realName, setRealName] = React.useState("");
+  React.useEffect(() => {
+    if (priv?.real_name != null) setRealName(priv.real_name);
+  }, [priv?.real_name]);
+
   const [alias, setAlias] = React.useState(profile.alias ?? "");
   const [pronouns, setPronouns] = React.useState(profile.pronouns ?? "");
   const [birthYear, setBirthYear] = React.useState<string>(
@@ -325,11 +333,15 @@ function IdentityEditor({ userId, profile, onSaved }: { userId: string; profile:
   const usernameValid = validateShortLabel(alias, { min: 2, max: 24, label: "Username" });
   const canSave = realNameValid.ok && usernameValid.ok;
 
+  // Pre-save side-effect: write real_name to the private table
+  const beforeSave = React.useCallback(async () => {
+    await updatePrivate.mutateAsync({ real_name: realName.trim() });
+  }, [updatePrivate, realName]);
+
   return (
     <SaveForm
       userId={userId}
       patch={{
-        real_name: realName.trim(),
         alias: alias.trim(),
         pronouns: pronouns.trim() || null,
         birth_year: parsedBirthYear,
@@ -338,6 +350,7 @@ function IdentityEditor({ userId, profile, onSaved }: { userId: string; profile:
       }}
       onSaved={onSaved}
       disabled={!canSave}
+      beforeSave={beforeSave}
     >
       <Field
         label="Real name"
@@ -857,12 +870,14 @@ function SaveForm({
   patch,
   onSaved,
   disabled,
+  beforeSave,
   children,
 }: {
   userId: string;
   patch: Record<string, any>;
   onSaved: () => void;
   disabled?: boolean;
+  beforeSave?: () => Promise<void>;
   children: React.ReactNode;
 }) {
   const [busy, setBusy] = React.useState(false);
@@ -873,6 +888,7 @@ function SaveForm({
     setBusy(true);
     setErr(null);
     try {
+      if (beforeSave) await beforeSave();
       const supa = getSupabaseBrowser();
       if (!supa) throw new Error("Not configured");
       const { error } = await supa.from("profiles").update(patch).eq("id", userId);

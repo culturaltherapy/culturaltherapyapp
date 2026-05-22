@@ -8,7 +8,10 @@ export type NotificationKind =
   | "tribe_accepted"
   | "thread_reply"
   | "connection_request"
-  | "connection_accepted";
+  | "connection_accepted"
+  | "direct_message"
+  | "post_comment"
+  | "post_like";
 
 export type Notification = {
   id: string;
