@@ -138,6 +138,35 @@ export function useAcceptConnection() {
   });
 }
 
+/**
+ * Returns accepted connections for ANY user, gated by their connections_visibility
+ * setting. Uses the SECURITY DEFINER RPC from migration 013 so the visibility
+ * check happens server-side.
+ */
+export function useUserConnections(userId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["user_connections", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const supa = getSupabaseBrowser();
+      if (!supa || !userId) return [];
+      const { data, error } = await (supa as any).rpc("get_visible_connections", { p_user_id: userId });
+      if (error) {
+        console.error("useUserConnections error:", error.message);
+        return [];
+      }
+      return (data ?? []) as Array<{
+        connection_id: string;
+        other_id: string;
+        other_alias: string | null;
+        other_avatar_url: string | null;
+        responded_at: string | null;
+        created_at: string;
+      }>;
+    },
+  });
+}
+
 export function useDeclineConnection() {
   const qc = useQueryClient();
   return useMutation({

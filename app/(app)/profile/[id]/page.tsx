@@ -22,7 +22,10 @@ import {
   useConnectionWith,
   useSendConnectionRequest,
   useAcceptConnection,
+  useUserConnections,
 } from "@/lib/hooks/useConnections";
+import { useOrCreateThreadWith } from "@/lib/hooks/useDirectMessages";
+import { useRouter } from "next/navigation";
 
 export default function ViewProfile() {
   const params = useParams<{ id: string }>();
@@ -37,7 +40,17 @@ export default function ViewProfile() {
   const { data: sharesTribe = false } = useSharesTribeWith(isOwnProfile ? null : params.id);
   const sendConnection = useSendConnectionRequest();
   const acceptConnection = useAcceptConnection();
+  const orCreateThread = useOrCreateThreadWith();
+  const router = useRouter();
   const [tab, setTab] = useTabParam("about");
+
+  async function openMessage() {
+    if (!params.id) return;
+    try {
+      const threadId = await orCreateThread.mutateAsync(params.id);
+      router.push(`/messages/${threadId}`);
+    } catch (_) {}
+  }
 
   if (isLoading) {
     return (
@@ -136,13 +149,22 @@ export default function ViewProfile() {
                 </button>
               )}
 
-              <button
-                className="text-xs text-ink3 cursor-not-allowed self-end"
-                title="Direct messaging is coming soon"
-                disabled
-              >
-                Message · coming soon
-              </button>
+              {connection?.status === "accepted" ? (
+                <button
+                  onClick={openMessage}
+                  disabled={orCreateThread.isPending}
+                  className="text-xs text-terracotta hover:underline self-end"
+                >
+                  {orCreateThread.isPending ? "Opening…" : `Message ${alias.split(" ")[0]}`}
+                </button>
+              ) : (
+                <span
+                  className="text-xs text-ink3 self-end"
+                  title="Connect first to send a message"
+                >
+                  Message · connect first
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -294,16 +316,38 @@ function ViewAboutTab({ bio, media, ownerId, prompts, alias }: {
 }
 
 function ViewConnectionsTab({ profileId, alias }: { profileId: string; alias: string }) {
-  // For chunk 2 we just show a placeholder note — viewing other users'
-  // connection lists isn't wired yet because connections RLS only exposes
-  // rows involving the viewer themselves. Chunk 3 expands this.
+  const { data: connections = [], isLoading } = useUserConnections(profileId);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="h-5 w-5 rounded-full border-2 border-terracotta border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (connections.length === 0) {
+    return (
+      <div className="surface p-6 text-center">
+        <p className="text-ink2 text-sm">{alias} hasn't accepted any connections yet.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="surface p-6 text-center">
-      <p className="text-ink2 text-sm">
-        {alias}'s connections will appear here. (Connection list rendering for
-        other users is being finished — coming next push.)
-      </p>
-    </div>
+    <ul className="grid sm:grid-cols-2 gap-3">
+      {connections.map((c) => (
+        <li key={c.connection_id} className="surface p-4">
+          <Link href={`/profile/${c.other_id}`} className="flex items-center gap-3">
+            <Avatar name={c.other_alias ?? "Member"} src={c.other_avatar_url} size={48} />
+            <div className="min-w-0">
+              <strong className="block truncate">{c.other_alias ?? "Member"}</strong>
+              <span className="text-xs text-ink3">Connected</span>
+            </div>
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 

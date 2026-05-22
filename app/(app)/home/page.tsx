@@ -7,6 +7,7 @@ import { useSession } from "@/lib/hooks/useSession";
 import { useProfiles } from "@/lib/hooks/useProfiles";
 import { useMyTribes } from "@/lib/hooks/useTribes";
 import { useDiscussionRooms } from "@/lib/hooks/useDiscussions";
+import { useMyConnections } from "@/lib/hooks/useConnections";
 import { Avatar } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
@@ -183,18 +184,7 @@ export default function HomePage() {
           )}
         </article>
 
-        <article className="surface p-5">
-          <div className="text-terracotta mb-2"><Pyramid size={32} /></div>
-          <p className="eyebrow">Quick start</p>
-          <h2 className="font-display text-2xl">Find your people.</h2>
-          <p className="text-ink2 text-sm mt-2 max-w-prose">
-            The network is where lived experience meets lived experience. Filter, search, and send a Tribe request when you feel ready.
-          </p>
-          <div className="mt-4 flex gap-2 flex-wrap">
-            <Link href="/network"><Button size="sm">Open the network</Button></Link>
-            <Link href="/profile"><Button size="sm" variant="outline">My profile</Button></Link>
-          </div>
-        </article>
+        <MyConnectionsCard />
       </section>
 
       <div className="mt-10 flex flex-wrap items-center gap-2 text-sm">
@@ -209,5 +199,75 @@ export default function HomePage() {
         </Chip>
       </div>
     </div>
+  );
+}
+
+function MyConnectionsCard() {
+  const { data: connections = [] } = useMyConnections();
+  const accepted = connections.filter((c) => c.status === "accepted");
+  const pendingIncoming = connections.filter(
+    (c) => c.status === "pending" && c.direction === "incoming"
+  );
+
+  return (
+    <article className="surface p-5">
+      <div className="flex items-baseline justify-between">
+        <div>
+          <p className="eyebrow">My Connections</p>
+          <h2 className="font-display text-2xl">
+            {accepted.length === 0 ? "No connections yet" : `${accepted.length} in your circle`}
+          </h2>
+        </div>
+        <Link href="/connections" className="text-sm text-terracotta hover:underline">
+          See all
+        </Link>
+      </div>
+
+      {pendingIncoming.length > 0 && (
+        <div className="mt-3 rounded-md bg-terracotta/10 border border-terracotta/30 px-3 py-2 text-sm">
+          <strong>{pendingIncoming.length}</strong> connection
+          {pendingIncoming.length === 1 ? " request" : " requests"} waiting for you ·{" "}
+          <Link href="/connections" className="text-terracotta hover:underline">Review</Link>
+        </div>
+      )}
+
+      {accepted.length === 0 ? (
+        <p className="mt-3 text-sm text-ink3">
+          Visit the{" "}
+          <Link href="/network" className="text-terracotta hover:underline">network</Link>{" "}
+          to find people whose story echoes yours.
+        </p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {accepted.slice(0, 4).map((c) => {
+            const other = c.other;
+            return (
+              <li key={c.id}>
+                <Link
+                  href={other?.id ? `/profile/${other.id}` : "#"}
+                  className="flex items-center gap-3 rounded-md p-2 hover:bg-ink/[.03]"
+                >
+                  <Avatar
+                    name={other?.alias ?? "Member"}
+                    src={other?.avatar_url}
+                    size={36}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <strong className="block truncate text-sm">{other?.alias ?? "Member"}</strong>
+                    <span className="text-xs text-ink3">Connected</span>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <div className="mt-4 flex gap-2">
+        <Link href="/messages" className="text-sm text-terracotta hover:underline">
+          Open messages →
+        </Link>
+      </div>
+    </article>
   );
 }
