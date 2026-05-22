@@ -191,6 +191,29 @@ export function usePendingTribeRequests() {
   });
 }
 
+/**
+ * Does the current signed-in user share at least one tribe with the given user?
+ *
+ * Cleverly relies on the RLS policy on tribe_members: a viewer can only SELECT
+ * tribe_members rows for tribes they're also a member of. So counting visible
+ * rows for `otherUserId` directly tells us whether we share a tribe.
+ */
+export function useSharesTribeWith(otherUserId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["shares_tribe", otherUserId],
+    enabled: !!otherUserId,
+    queryFn: async () => {
+      const supa = getSupabaseBrowser();
+      if (!supa || !otherUserId) return false;
+      const { count } = await (supa as any)
+        .from("tribe_members")
+        .select("tribe_id", { count: "exact", head: true })
+        .eq("user_id", otherUserId);
+      return (count ?? 0) > 0;
+    },
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Writes
 // ─────────────────────────────────────────────────────────────────────────────

@@ -19,11 +19,15 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { LanguagePicker } from "@/components/ui/LanguagePicker";
 import { validateMeaningful, validateShortLabel } from "@/lib/validation";
+import { useProfileMedia } from "@/lib/hooks/useProfileMedia";
+import { MediaUploader } from "@/components/media/MediaUploader";
+import { MediaGallery } from "@/components/media/MediaGallery";
 
 type SectionKey =
   | "avatar"
   | "identity"
   | "bio"
+  | "media"
   | "roots"
   | "experience"
   | "diagnosis"
@@ -54,6 +58,7 @@ export default function EditProfile() {
   const router = useRouter();
   const { userId, profile, loading } = useSession();
   const { data: prompts = [], refetch: refetchPrompts } = useUserPrompts(userId);
+  const { data: media = [], refetch: refetchMedia } = useProfileMedia(userId);
   const [openSection, setOpenSection] = React.useState<SectionKey | null>(null);
   const [, forceRefresh] = React.useReducer((x) => x + 1, 0);
 
@@ -82,6 +87,7 @@ export default function EditProfile() {
     // Force the session/profile to refetch — easiest is a soft route refresh
     router.refresh();
     await refetchPrompts();
+    await refetchMedia();
     forceRefresh();
   }
 
@@ -136,6 +142,23 @@ export default function EditProfile() {
           onToggle={() => toggle("bio")}
         >
           <BioEditor userId={userId} profile={profile} onSaved={reload} />
+        </SectionCard>
+
+        <SectionCard
+          title="Photos & videos"
+          summary={`${media.length} item${media.length === 1 ? "" : "s"}`}
+          open={openSection === "media"}
+          onToggle={() => toggle("media")}
+        >
+          <div className="space-y-5">
+            <MediaUploader existing={media} ownerId={userId} />
+            {media.length > 0 && (
+              <div>
+                <p className="eyebrow mb-2">Your gallery — hover to reorder or delete</p>
+                <MediaGallery items={media} ownerId={userId} canEdit />
+              </div>
+            )}
+          </div>
         </SectionCard>
 
         <SectionCard

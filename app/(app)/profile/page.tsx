@@ -1,11 +1,16 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { useSession } from "@/lib/hooks/useSession";
 import { useUserPrompts } from "@/lib/hooks/useMyPrompts";
 import { useWallPosts } from "@/lib/hooks/useWallPosts";
+import { useProfileMedia } from "@/lib/hooks/useProfileMedia";
+import { useMyConnections } from "@/lib/hooks/useConnections";
 import { PostComposer } from "@/components/posts/PostComposer";
 import { PostCard } from "@/components/posts/PostCard";
+import { MediaGallery } from "@/components/media/MediaGallery";
+import { ProfileTabs, useTabParam } from "@/components/profile/ProfileTabs";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
@@ -15,6 +20,9 @@ export default function MyPublicProfile() {
   const { userId, profile, loading } = useSession();
   const { data: prompts = [], isLoading: promptsLoading } = useUserPrompts(userId);
   const { data: posts = [] } = useWallPosts(userId);
+  const { data: media = [] } = useProfileMedia(userId);
+  const { data: connections = [] } = useMyConnections();
+  const [tab, setTab] = useTabParam("about");
 
   if (loading) {
     return (
@@ -30,6 +38,7 @@ export default function MyPublicProfile() {
   const country = profile?.country ?? "";
   const descent: string[] = (profile as any)?.descent ?? [];
   const languages: string[] = (profile as any)?.languages ?? [];
+  const languagesUnderstood: string[] = (profile as any)?.languages_understood ?? [];
   const tags: string[] = profile?.experience_tags ?? [];
   const verified = (profile as any)?.id_verified ?? false;
   const avatarColor = (profile as any)?.avatar_color ?? "var(--ct-rust)";
@@ -45,8 +54,11 @@ export default function MyPublicProfile() {
     descent.join(" · "),
   ].filter(Boolean).join(" · ");
 
+  const acceptedConnections = connections.filter((c) => c.status === "accepted");
+
   return (
     <div>
+      {/* Hero */}
       <section className="surface p-6 sm:p-8 relative overflow-hidden">
         <div className="absolute -top-8 -right-8 opacity-10 text-terracotta">
           <EyeOfHorus size={220} />
@@ -68,74 +80,79 @@ export default function MyPublicProfile() {
         </div>
       </section>
 
-      {bio && (
-        <section className="surface p-5 sm:p-6 mt-4">
-          <p className="eyebrow mb-2">About</p>
-          <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{bio}</p>
-        </section>
-      )}
+      {/* Tabs */}
+      <ProfileTabs
+        active={tab}
+        onChange={setTab}
+        showConnections
+        postCount={posts.length}
+        connectionCount={acceptedConnections.length}
+        mediaCount={media.length}
+      />
 
+      {/* Tab content */}
       <div className="grid lg:grid-cols-[1fr_320px] gap-6 mt-6">
-        {/* Wall */}
         <section>
-          <header className="flex items-baseline justify-between">
-            <h2 className="font-display text-2xl">Wall</h2>
-            <span className="text-xs text-ink3">
-              {posts.length} {posts.length === 1 ? "post" : "posts"}
-            </span>
-          </header>
+          {tab === "about" && (
+            <AboutTab
+              bio={bio}
+              media={media}
+              ownerId={userId!}
+              canEdit
+              prompts={prompts}
+              promptsLoading={promptsLoading}
+            />
+          )}
 
-          <div className="mt-3">
-            <PostComposer />
-          </div>
-
-          {posts.length === 0 ? (
-            <div className="mt-4 surface p-6 text-center">
-              <p className="text-ink2 text-sm">
-                Your wall is empty. Share a thought above — your Tribe will see it.
-              </p>
+          {tab === "wall" && (
+            <div>
+              <header className="flex items-baseline justify-between">
+                <h2 className="font-display text-2xl">Wall</h2>
+                <span className="text-xs text-ink3">
+                  {posts.length} {posts.length === 1 ? "post" : "posts"}
+                </span>
+              </header>
+              <div className="mt-3">
+                <PostComposer />
+              </div>
+              {posts.length === 0 ? (
+                <div className="mt-4 surface p-6 text-center">
+                  <p className="text-ink2 text-sm">
+                    Your wall is empty. Share a thought above — your Tribe will see it.
+                  </p>
+                </div>
+              ) : (
+                <ul className="mt-4 space-y-3">
+                  {posts.map((p) => <PostCard key={p.id} post={p} canDelete />)}
+                </ul>
+              )}
             </div>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {posts.map((p) => (
-                <PostCard key={p.id} post={p} canDelete />
-              ))}
-            </ul>
+          )}
+
+          {tab === "connections" && (
+            <ConnectionsTab connections={acceptedConnections} />
           )}
         </section>
 
+        {/* Sidebar (always visible across all tabs) */}
         <aside className="space-y-5">
-          {/* Prompts — real answers from onboarding */}
-          {promptsLoading ? (
-            <div className="surface p-5">
-              <div className="h-3 w-24 bg-line rounded animate-pulse" />
-              <div className="mt-2 h-6 bg-line rounded animate-pulse" />
-            </div>
-          ) : prompts.length > 0 ? (
-            prompts.map((p) => (
-              <div key={p.id} className="surface p-5">
-                <p className="eyebrow">{p.question}</p>
-                <p className="font-display text-xl mt-1 italic leading-snug">"{p.answer}"</p>
-              </div>
-            ))
-          ) : (
-            <div className="surface p-5">
-              <p className="eyebrow">Prompts</p>
-              <p className="text-ink3 text-sm mt-1">
-                You haven't answered any prompts yet.{" "}
-                <Link href="/profile/edit" className="text-terracotta hover:underline">
-                  Add some
-                </Link>.
-              </p>
-            </div>
-          )}
-
           {/* Languages */}
           <div className="surface p-5">
             <h3 className="font-display text-lg">Languages</h3>
-            <p className="text-ink2 mt-1 text-sm">
-              {languages.length > 0 ? languages.join(" · ") : "—"}
-            </p>
+            {languages.length > 0 ? (
+              <p className="text-ink2 mt-1 text-sm">
+                <span className="text-ink3 text-xs">Speaks: </span>
+                {languages.join(" · ")}
+              </p>
+            ) : (
+              <p className="text-ink3 mt-1 text-sm">—</p>
+            )}
+            {languagesUnderstood.length > 0 && (
+              <p className="text-ink2 mt-1 text-sm">
+                <span className="text-ink3 text-xs">Understands: </span>
+                {languagesUnderstood.join(" · ")}
+              </p>
+            )}
           </div>
 
           {/* Social links */}
@@ -166,11 +183,137 @@ export default function MyPublicProfile() {
             <ul className="mt-2 text-sm text-ink2 space-y-1">
               {(profile as any)?.accepts_tribe_requests !== false && <li>Tribe requests</li>}
               {(profile as any)?.accepts_dms !== false && <li>Direct messages</li>}
-              <li className="text-ink3">Calls & video — off</li>
+              {(profile as any)?.accepts_calls === true && <li>Voice calls (peer-supporter)</li>}
+              {(profile as any)?.accepts_video === true && <li>Video calls (peer-supporter)</li>}
             </ul>
           </div>
         </aside>
       </div>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tab content components
+// ─────────────────────────────────────────────────────────────────────────────
+
+function AboutTab({
+  bio,
+  media,
+  ownerId,
+  canEdit,
+  prompts,
+  promptsLoading,
+}: {
+  bio: string | null;
+  media: any[];
+  ownerId: string;
+  canEdit: boolean;
+  prompts: any[];
+  promptsLoading: boolean;
+}) {
+  return (
+    <div className="space-y-6">
+      {bio ? (
+        <div className="surface p-5 sm:p-6">
+          <p className="eyebrow mb-2">About me</p>
+          <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{bio}</p>
+        </div>
+      ) : canEdit ? (
+        <div className="surface p-5 sm:p-6 text-center">
+          <p className="text-ink2 text-sm">
+            Your bio is empty.{" "}
+            <Link href="/profile/edit" className="text-terracotta hover:underline">
+              Add a few sentences
+            </Link>{" "}
+            so people get a feel for who you are.
+          </p>
+        </div>
+      ) : null}
+
+      <div>
+        <div className="flex items-baseline justify-between mb-3">
+          <h3 className="font-display text-xl">Photos & videos</h3>
+          {canEdit && (
+            <Link href="/profile/edit?section=media" className="text-sm text-terracotta hover:underline">
+              Manage
+            </Link>
+          )}
+        </div>
+        {media.length === 0 && canEdit ? (
+          <div className="surface p-6 text-center">
+            <p className="text-ink2 text-sm">
+              No photos or videos yet.{" "}
+              <Link href="/profile/edit?section=media" className="text-terracotta hover:underline">
+                Add some
+              </Link>{" "}
+              to bring your profile to life.
+            </p>
+          </div>
+        ) : (
+          <MediaGallery items={media} ownerId={ownerId} canEdit={false} />
+        )}
+      </div>
+
+      <div>
+        <h3 className="font-display text-xl mb-3">Prompts</h3>
+        {promptsLoading ? (
+          <div className="surface p-5">
+            <div className="h-3 w-24 bg-line rounded animate-pulse" />
+            <div className="mt-2 h-6 bg-line rounded animate-pulse" />
+          </div>
+        ) : prompts.length > 0 ? (
+          <ul className="grid sm:grid-cols-2 gap-3">
+            {prompts.map((p: any) => (
+              <li key={p.id} className="surface p-5">
+                <p className="eyebrow">{p.question}</p>
+                <p className="font-display text-lg mt-1 italic leading-snug">"{p.answer}"</p>
+              </li>
+            ))}
+          </ul>
+        ) : canEdit ? (
+          <div className="surface p-5">
+            <p className="text-ink3 text-sm">
+              You haven't answered any prompts yet.{" "}
+              <Link href="/profile/edit" className="text-terracotta hover:underline">
+                Add some
+              </Link>.
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ConnectionsTab({ connections }: { connections: any[] }) {
+  if (connections.length === 0) {
+    return (
+      <div className="surface p-8 text-center">
+        <p className="text-ink2 text-sm">You haven't accepted any connections yet.</p>
+        <Link href="/network" className="mt-3 inline-block text-terracotta hover:underline">
+          Browse the network
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <ul className="grid sm:grid-cols-2 gap-3">
+      {connections.map((c) => {
+        const other = c.other;
+        return (
+          <li key={c.id} className="surface p-4">
+            <Link href={other?.id ? `/profile/${other.id}` : "#"} className="flex items-center gap-3">
+              <Avatar name={other?.alias ?? "Member"} src={other?.avatar_url} size={48} />
+              <div className="min-w-0">
+                <strong className="block truncate">{other?.alias ?? "Member"}</strong>
+                <span className="text-xs text-ink3">Connected</span>
+              </div>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
