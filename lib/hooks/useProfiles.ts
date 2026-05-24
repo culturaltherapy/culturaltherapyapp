@@ -19,7 +19,12 @@ export function useProfiles(q?: string) {
       let query = supa
         .from("profiles")
         .select("id, alias, avatar_url, city, country, descent, experience_tags, id_verified")
-        .not("alias", "is", null) // Only return profiles that have completed onboarding
+        // Only return profiles that have completed onboarding AND have an alias
+        // AND aren't deactivated. Partial / abandoned onboardings stay hidden
+        // from the network until the user finishes.
+        .not("alias", "is", null)
+        .not("onboarding_completed_at", "is", null)
+        .is("deactivated_at", null)
         .limit(50);
 
       if (currentUserId) {

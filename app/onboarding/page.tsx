@@ -152,8 +152,112 @@ export default function Onboarding() {
     });
   }, []);
 
-  function next() { setStep((n) => Math.min(TOTAL, n + 1)); }
+  function next() {
+    // Save what we've got so far to the DB before advancing — so an abandoned
+    // onboarding doesn't lose data even across browsers/devices
+    savePartial().catch(() => { /* non-fatal — localStorage still has it */ });
+    setStep((n) => Math.min(TOTAL, n + 1));
+  }
   function prev() { setStep((n) => Math.max(1, n - 1)); }
+
+  // Write the slice of profile data that's been filled in so far. Idempotent;
+  // safe to call on every step. onboarding_completed_at stays null until finish().
+  async function savePartial() {
+    const supa = getSupabaseBrowser();
+    if (!supa) return;
+    const { data: { session } } = await supa.auth.getSession();
+    if (!session) return;
+    const userId = session.user.id;
+
+    const parsedBirthYear = (() => {
+      const n = parseInt(s.birthYear, 10);
+      return Number.isFinite(n) && n >= 1900 && n <= new Date().getFullYear() ? n : null;
+    })();
+
+    // Public profile fields
+    const patch: Record<string, any> = {};
+    if (s.alias.trim())           patch.alias    = s.alias.trim();
+    if (s.pronouns)               patch.pronouns = s.pronouns;
+    if (parsedBirthYear != null)  patch.birth_year = parsedBirthYear;
+    if (s.bio.trim().length >= 30) patch.bio = s.bio.trim();
+    if (s.descent.length > 0)     patch.descent = s.descent;
+    if (s.languages.length > 0)   patch.languages = s.languages;
+    if (s.languagesUnderstood.length > 0) patch.languages_understood = s.languagesUnderstood;
+    if (s.country)                patch.country = s.country;
+    if (s.shareCity ? s.city : null) patch.city = s.shareCity ? s.city : null;
+    if (s.experienceTags.length > 0) patch.experience_tags = s.experienceTags;
+    if (s.diagnosis)              patch.diagnosis = s.diagnosis;
+    patch.diagnosis_visibility = s.diagnosisVisible ? "tribe" : "private";
+
+    if (Object.keys(patch).length > 0) {
+      await (supa as any).from("profiles").update(patch).eq("id", userId);
+    }
+
+    // Real name → private table
+    if (s.realName.trim()) {
+      await (supa as any).from("profiles_private").upsert(
+        { user_id: userId, real_name: s.realName.trim() },
+        { onConflict: "user_id" }
+      );
+    }
+
+    // Prompts — only when we have at least one filled, replace the set
+    const filledPrompts = s.prompts.filter((p) => p.answer.trim());
+    if (filledPrompts.length > 0) {
+      await (supa as any).from("profile_prompts").delete().eq("user_id", userId);
+      await (supa as any).from("profile_prompts").insert(
+        filledPrompts.map((p, i) => ({
+          user_id: userId,
+          prompt_id: `onboarding_${i}`,
+          question: p.question,
+          answer: p.answer.trim(),
+          visibility: "tribe",
+        }))
+      );
+    }
+  }
+
+  // Hydrate the form from the DB once we know who the user is — so coming back
+  // on a different device shows their saved progress (not a blank form).
+  React.useEffect(() => {
+    if (!authChecked) return;
+    let cancelled = false;
+    (async () => {
+      const supa = getSupabaseBrowser();
+      if (!supa) return;
+      const { data: { session } } = await supa.auth.getSession();
+      if (!session) return;
+
+      const [profileRes, privRes, promptsRes] = await Promise.all([
+        (supa as any).from("profiles").select("*").eq("id", session.user.id).maybeSingle(),
+        (supa as any).from("profiles_private").select("real_name").eq("user_id", session.user.id).maybeSingle(),
+        (supa as any).from("profile_prompts").select("question, answer").eq("user_id", session.user.id),
+      ]);
+      if (cancelled) return;
+
+      const p = profileRes.data;
+      if (!p) return;
+
+      setS((prev) => ({
+        ...prev,
+        realName:  privRes.data?.real_name ?? prev.realName,
+        alias:     p.alias ?? prev.alias,
+        pronouns:  p.pronouns ?? prev.pronouns,
+        birthYear: p.birth_year != null ? String(p.birth_year) : prev.birthYear,
+        bio:       p.bio ?? prev.bio,
+        descent:   p.descent ?? prev.descent,
+        languages: p.languages ?? prev.languages,
+        languagesUnderstood: p.languages_understood ?? prev.languagesUnderstood,
+        country:   p.country ?? prev.country,
+        city:      p.city ?? prev.city,
+        experienceTags: p.experience_tags ?? prev.experienceTags,
+        diagnosis: p.diagnosis ?? prev.diagnosis,
+        diagnosisVisible: p.diagnosis_visibility === "tribe",
+        prompts:   (promptsRes.data ?? []).map((pp: any) => ({ question: pp.question ?? "", answer: pp.answer ?? "" })),
+      }));
+    })();
+    return () => { cancelled = true; };
+  }, [authChecked]);
 
   const canContinue = React.useMemo(() => {
     switch (step) {
