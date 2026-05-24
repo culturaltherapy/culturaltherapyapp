@@ -485,63 +485,122 @@ export const LANGUAGE_OPTIONS = [
 
 // Social link platforms — each profile can have any/all of these.
 // ─────────────────────────────────────────────────────────────────────────────
-// Heritage / descent — comprehensive list. Mixed-race friendly (pick multiple),
-// curated to reflect African, Caribbean, South Asian, East Asian, Middle Eastern,
-// European, and Indigenous heritages. Users can also add their own.
+// Heritage / descent — every UN-recognised country (as a nationality / demonym),
+// plus major sub-national, indigenous, regional, and diaspora identifiers.
+// Mixed-heritage friendly (pick multiple). Users can also add their own via
+// the TagPicker's custom input.
 // ─────────────────────────────────────────────────────────────────────────────
 export const HERITAGE_OPTIONS = [
+  // ─── Africa ─────────────────────────────────────────────────
   // West African
-  "Ghanaian", "Nigerian", "Sierra Leonean", "Liberian", "Senegalese", "Gambian",
-  "Malian", "Ivorian", "Togolese", "Beninese", "Cameroonian", "Burkinabé", "Guinean",
+  "Beninese", "Burkinabé", "Cabo Verdean", "Cameroonian", "Gambian", "Ghanaian",
+  "Guinean", "Bissau-Guinean", "Ivorian", "Liberian", "Malian", "Nigerien",
+  "Nigerian", "Senegalese", "Sierra Leonean", "Togolese",
   // East African
-  "Kenyan", "Tanzanian", "Ugandan", "Rwandan", "Burundian", "Ethiopian", "Eritrean",
-  "Somali", "Sudanese", "South Sudanese", "Djiboutian", "Mauritian", "Malagasy",
+  "Burundian", "Comoran", "Djiboutian", "Eritrean", "Ethiopian", "Kenyan",
+  "Malagasy", "Mauritian", "Rwandan", "Seychellois", "Somali", "South Sudanese",
+  "Sudanese", "Tanzanian", "Ugandan",
   // Central African
-  "Congolese (DRC)", "Congolese (Brazzaville)", "Angolan", "Mozambican", "Chadian",
-  "Central African", "Gabonese", "Equatorial Guinean",
+  "Angolan", "Central African", "Chadian", "Congolese (DRC)",
+  "Congolese (Brazzaville)", "Equatorial Guinean", "Gabonese", "Mozambican",
+  "São Toméan",
   // Southern African
-  "South African", "Zimbabwean", "Zambian", "Namibian", "Botswanan", "Lesothan",
-  "Swazi", "Malawian",
+  "Botswanan", "Eswatini (Swazi)", "Lesothan", "Mosotho", "Malawian", "Namibian",
+  "South African", "Zambian", "Zimbabwean",
   // North African
-  "Egyptian", "Moroccan", "Algerian", "Tunisian", "Libyan", "Mauritanian",
-  // Caribbean
-  "Jamaican", "Trinidadian", "Bajan (Barbadian)", "Grenadian", "Vincentian",
-  "St Lucian", "Haitian", "Dominican (Dominica)", "Dominican (DR)", "Cuban",
-  "Puerto Rican", "Bahamian", "Antiguan", "Kittitian (St Kitts)", "Guyanese",
-  "Surinamese", "Belizean", "Cayman", "Turks & Caicos",
-  // Latin American
-  "Brazilian", "Colombian", "Venezuelan", "Mexican", "Peruvian", "Chilean",
-  "Argentine", "Bolivian", "Ecuadorian", "Honduran", "Salvadoran", "Guatemalan",
-  "Panamanian", "Costa Rican", "Nicaraguan", "Uruguayan", "Paraguayan",
-  "Afro-Latin", "Afro-Brazilian", "Afro-Caribbean",
+  "Algerian", "Egyptian", "Libyan", "Mauritanian", "Moroccan", "Sahrawi", "Tunisian",
+
+  // ─── Asia ───────────────────────────────────────────────────
   // South Asian
-  "Indian", "Pakistani", "Bangladeshi", "Sri Lankan", "Nepali", "Bhutanese",
-  "Maldivian", "Punjabi", "Tamil", "Gujarati", "Bengali", "Sindhi", "Kashmiri",
+  "Bangladeshi", "Bhutanese", "Indian", "Maldivian", "Nepali", "Pakistani",
+  "Sri Lankan",
+  // Indian sub-national / linguistic
+  "Bengali", "Gujarati", "Kannada", "Kashmiri", "Malayali", "Marathi", "Punjabi",
+  "Sindhi", "Tamil", "Telugu",
   // East Asian
-  "Chinese", "Hong Kong", "Taiwanese", "Japanese", "Korean", "Mongolian", "Tibetan",
+  "Chinese", "Han Chinese", "Hakka", "Hong Konger", "Macanese", "Taiwanese",
+  "Japanese", "Korean", "South Korean", "North Korean", "Mongolian", "Tibetan",
   // South-East Asian
-  "Filipino", "Vietnamese", "Thai", "Indonesian", "Malaysian", "Singaporean",
-  "Cambodian", "Laotian", "Burmese", "Timorese",
+  "Bruneian", "Burmese (Myanmar)", "Cambodian", "Filipino", "Hmong", "Indonesian",
+  "Laotian", "Malaysian", "Singaporean", "Thai", "Timorese", "Vietnamese",
+  // Central Asian
+  "Afghan", "Kazakh", "Kyrgyz", "Tajik", "Turkmen", "Uzbek",
+  // Caucasus
+  "Armenian", "Azerbaijani", "Georgian",
   // Middle Eastern
-  "Lebanese", "Syrian", "Palestinian", "Jordanian", "Iraqi", "Iranian", "Yemeni",
-  "Saudi", "Emirati", "Kuwaiti", "Qatari", "Bahraini", "Omani", "Turkish",
-  "Kurdish", "Israeli", "Druze", "Assyrian",
-  // European
-  "British", "Irish", "Scottish", "Welsh", "English", "French", "German", "Italian",
-  "Spanish", "Portuguese", "Dutch", "Belgian", "Swiss", "Austrian", "Polish",
-  "Czech", "Slovak", "Hungarian", "Romanian", "Bulgarian", "Greek", "Cypriot",
-  "Albanian", "Serbian", "Croatian", "Bosnian", "Slovenian", "Macedonian",
-  "Russian", "Ukrainian", "Belarusian", "Lithuanian", "Latvian", "Estonian",
-  "Finnish", "Swedish", "Norwegian", "Danish", "Icelandic", "Maltese",
-  // North American
-  "American", "African American", "Black American", "Canadian", "African Canadian",
-  // Indigenous
-  "Native American", "First Nations (Canada)", "Métis", "Inuit", "Native Hawaiian",
-  "Indigenous Australian", "Māori", "Pacific Islander", "Samoan", "Fijian", "Tongan",
-  // Diaspora / mixed identifiers
-  "Mixed heritage", "Mixed Black & White", "Mixed Black & Asian", "Mixed Asian & White",
-  "Black British", "British Asian", "Black European", "Afropean",
-  "Diaspora (other)",
+  "Bahraini", "Emirati", "Iranian", "Iraqi", "Israeli", "Jordanian", "Kuwaiti",
+  "Lebanese", "Omani", "Palestinian", "Qatari", "Saudi", "Syrian", "Turkish",
+  "Yemeni",
+  // Middle Eastern sub-ethnic
+  "Assyrian", "Chaldean", "Druze", "Kurdish", "Bedouin", "Mizrahi", "Sephardic",
+
+  // ─── Europe ─────────────────────────────────────────────────
+  // British Isles
+  "British", "English", "Scottish", "Welsh", "Northern Irish", "Irish",
+  "Manx", "Cornish", "Gibraltarian",
+  // Western
+  "Andorran", "Austrian", "Belgian", "Dutch", "French", "German", "Liechtensteiner",
+  "Luxembourgish", "Monégasque", "Swiss",
+  // Southern
+  "Italian", "Maltese", "Portuguese", "Spanish", "San Marinese", "Vatican",
+  // Iberian sub-national
+  "Basque", "Catalan", "Galician",
+  // Nordic
+  "Danish", "Faroese", "Finnish", "Greenlandic", "Icelandic", "Norwegian",
+  "Sami", "Swedish",
+  // Central / Eastern
+  "Belarusian", "Bulgarian", "Czech", "Estonian", "Hungarian", "Latvian",
+  "Lithuanian", "Moldovan", "Polish", "Romanian", "Russian", "Slovak",
+  "Ukrainian",
+  // Balkan / South-East European
+  "Albanian", "Bosnian", "Croatian", "Cypriot", "Greek", "Kosovar",
+  "North Macedonian", "Montenegrin", "Serbian", "Slovenian",
+  // European other identifiers
+  "Roma", "Romani", "Ashkenazi", "European Jewish", "Afropean",
+
+  // ─── Americas — North ───────────────────────────────────────
+  "American", "African American", "Black American", "Asian American",
+  "Latino/Hispanic American", "Italian American", "Irish American",
+  "Jewish American", "Arab American",
+  "Canadian", "African Canadian", "Québécois", "Acadian",
+  "Mexican", "Mexican American", "Chicano/Chicana",
+
+  // ─── Caribbean ──────────────────────────────────────────────
+  "Anguillan", "Antiguan", "Aruban", "Bahamian", "Bajan (Barbadian)",
+  "Belizean", "Bermudian", "British Virgin Islander", "Caymanian",
+  "Cuban", "Curaçaoan", "Dominican (Dominica)", "Dominican (DR)",
+  "Grenadian", "Guyanese", "Haitian", "Jamaican", "Kittitian (St Kitts)",
+  "Montserratian", "Puerto Rican", "St Lucian", "Surinamese",
+  "Trinidadian", "Turks & Caicos Islander", "US Virgin Islander",
+  "Vincentian (St Vincent)", "Afro-Caribbean",
+
+  // ─── Americas — Central & South ─────────────────────────────
+  "Argentine", "Bolivian", "Brazilian", "Chilean", "Colombian", "Costa Rican",
+  "Ecuadorian", "Falkland Islander", "French Guianese", "Guatemalan",
+  "Honduran", "Nicaraguan", "Panamanian", "Paraguayan", "Peruvian",
+  "Salvadoran", "Uruguayan", "Venezuelan",
+  // Indigenous & Afro-Latin
+  "Afro-Latin", "Afro-Brazilian", "Quechua", "Aymara", "Mapuche",
+  "Guaraní", "Garifuna",
+
+  // ─── Oceania ────────────────────────────────────────────────
+  "Australian", "New Zealander", "Pākehā",
+  "Indigenous Australian", "Aboriginal Australian", "Torres Strait Islander",
+  "Māori",
+  "Cook Islander", "Fijian", "I-Kiribati", "Marshallese", "Micronesian",
+  "Nauruan", "Niuean", "Palauan", "Papua New Guinean", "Samoan",
+  "Solomon Islander", "Tongan", "Tuvaluan", "Vanuatuan",
+  "Pacific Islander",
+
+  // ─── Indigenous (Americas + global) ─────────────────────────
+  "Native American", "First Nations (Canada)", "Métis", "Inuit",
+  "Native Hawaiian",
+
+  // ─── Diaspora / Mixed / Identity labels ─────────────────────
+  "Black British", "British Asian", "Black European",
+  "Mixed heritage", "Mixed Black & White", "Mixed Black & Asian",
+  "Mixed Asian & White", "Mixed (other)", "Multiracial",
+  "Diaspora (other)", "Other / prefer not to say",
 ];
 
 // Curated city list per country (top ~15 in each). Users can still type a
