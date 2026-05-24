@@ -49,7 +49,9 @@ type State = {
 // 9  ID Verification (simulated placeholder — real vendor wired later)
 // 10 Code of Conduct
 // 11 Done
-const TOTAL = 11;
+// Step 11 (the celebration "you're in" screen) was removed — finish now
+// routes users straight to /profile so they see what others see.
+const TOTAL = 10;
 
 export default function Onboarding() {
   const router = useRouter();
@@ -115,7 +117,6 @@ export default function Onboarding() {
       case 8:  return true;
       case 9:  return s.idStatus === "verified";
       case 10: return s.cocAccepted;
-      case 11: return true;
       default: return false;
     }
   }, [step, s]);
@@ -220,7 +221,7 @@ export default function Onboarding() {
           }
 
           setSaving(false);
-          router.push("/home");
+          router.push("/profile");
           return;
         }
       }
@@ -235,7 +236,7 @@ export default function Onboarding() {
       setSaveErr(e?.message ?? "Something went wrong. You can edit your profile later.");
       setSaving(false);
       // Still navigate — don't trap the user
-      router.push("/home");
+      router.push("/profile");
     }
   }
 
@@ -277,7 +278,6 @@ export default function Onboarding() {
           {step === 8  && <StepAvatar s={s} patch={patch} />}
           {step === 9  && <StepID s={s} patch={patch} />}
           {step === 10 && <StepCoC s={s} patch={patch} />}
-          {step === 11 && <StepDone s={s} onFinish={finish} saving={saving} saveErr={saveErr} />}
         </div>
       </main>
 
@@ -300,7 +300,7 @@ export default function Onboarding() {
               </Button>
             ) : (
               <Button onClick={finish} size="md" disabled={saving}>
-                {saving ? "Saving…" : "Enter the network"} <Icon name="arrow" size={14} />
+                {saving ? "Saving…" : "Finish and see my profile"} <Icon name="arrow" size={14} />
               </Button>
             )}
           </div>
