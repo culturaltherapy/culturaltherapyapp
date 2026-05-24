@@ -11,6 +11,7 @@ type Role = "lived_experience" | "accredited_peer_supporter" | "other";
 export function PeerSupporterSignupForm() {
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
+  const [phone, setPhone] = React.useState("");
   const [role, setRole] = React.useState<Role>("lived_experience");
   const [organisation, setOrganisation] = React.useState("");
   const [message, setMessage] = React.useState("");
@@ -23,10 +24,16 @@ export function PeerSupporterSignupForm() {
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
       ? { ok: true as const }
       : { ok: false as const, reason: "Enter a valid email." };
+  // Phone: at least 7 digits (very permissive for international formats)
+  const phoneDigits = phone.replace(/\D/g, "");
+  const phoneValid =
+    phoneDigits.length >= 7 && phoneDigits.length <= 16
+      ? { ok: true as const }
+      : { ok: false as const, reason: "Enter a valid phone number." };
   const messageValid = message.trim().length === 0
     ? { ok: true as const }
     : validateMeaningful(message, { minChars: 20, minWords: 4, label: "Message" });
-  const canSubmit = nameValid.ok && emailValid.ok && messageValid.ok && !busy;
+  const canSubmit = nameValid.ok && emailValid.ok && phoneValid.ok && messageValid.ok && !busy;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,6 +46,7 @@ export function PeerSupporterSignupForm() {
       const { error } = await (supa as any).from("peer_supporter_signups").insert({
         name: name.trim(),
         email: email.trim().toLowerCase(),
+        phone: phone.trim(),
         role,
         organisation: organisation.trim() || null,
         message: message.trim() || null,
@@ -97,6 +105,22 @@ export function PeerSupporterSignupForm() {
           />
         </Field>
       </div>
+
+      <Field
+        label="Phone number"
+        required
+        hint="Include country code (e.g. +44, +1)."
+        error={phone.trim() && !phoneValid.ok ? phoneValid.reason : undefined}
+      >
+        <Input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          autoComplete="tel"
+          placeholder="+44 7700 900000"
+          maxLength={30}
+        />
+      </Field>
 
       <Field label="Your role" required>
         <Select value={role} onChange={(e) => setRole(e.target.value as Role)}>

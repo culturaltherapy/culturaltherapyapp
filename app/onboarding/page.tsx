@@ -9,10 +9,25 @@ import { Field, Input, Textarea, Select } from "@/components/ui/Field";
 import { Chip } from "@/components/ui/Chip";
 import { Sankofa, Ubuntu, Pyramid, EyeOfHorus, Dwennimmen, Funtunfunefu } from "@/components/motifs/Motifs";
 import { Icon } from "@/components/ui/Icon";
-import { codeOfConduct, experienceTagPool, promptLibrary } from "@/lib/mock-data";
+import {
+  codeOfConduct,
+  experienceTagPool,
+  promptLibrary,
+  HERITAGE_OPTIONS,
+  CITIES_BY_COUNTRY,
+} from "@/lib/mock-data";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { LanguagePicker } from "@/components/ui/LanguagePicker";
-import { validateMeaningful, validateShortLabel } from "@/lib/validation";
+import { TagPicker } from "@/components/ui/TagPicker";
+import { MediaUploader } from "@/components/media/MediaUploader";
+import { MediaGallery } from "@/components/media/MediaGallery";
+import { useProfileMedia } from "@/lib/hooks/useProfileMedia";
+import { useSession } from "@/lib/hooks/useSession";
+import {
+  validateMeaningful,
+  validateShortLabel,
+  getPromptValidationRule,
+} from "@/lib/validation";
 
 type State = {
   realName: string;
@@ -88,6 +103,45 @@ export default function Onboarding() {
     setS((prev) => ({ ...prev, ...p }));
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Restore from localStorage on mount so back-button / accidental
+  // refresh doesn't lose what the user already entered
+  // ─────────────────────────────────────────────────────────────
+  const STORAGE_KEY = "ct_onboarding_state_v1";
+  const STEP_KEY = "ct_onboarding_step_v1";
+  const restoredRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (restoredRef.current) return;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        setS((prev) => ({ ...prev, ...saved }));
+      }
+      const savedStep = localStorage.getItem(STEP_KEY);
+      if (savedStep) {
+        const n = parseInt(savedStep, 10);
+        if (Number.isFinite(n) && n >= 1 && n <= 10) setStep(n);
+      }
+    } catch {}
+    restoredRef.current = true;
+  }, []);
+
+  // Save state to localStorage on every change after restore
+  React.useEffect(() => {
+    if (!restoredRef.current) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    } catch {}
+  }, [s]);
+
+  // Save step too
+  React.useEffect(() => {
+    if (!restoredRef.current) return;
+    try { localStorage.setItem(STEP_KEY, String(step)); } catch {}
+  }, [step]);
+
   // Check auth state — always show step 0, but adapt its content
   React.useEffect(() => {
     const supa = getSupabaseBrowser();
@@ -110,10 +164,21 @@ export default function Onboarding() {
         && validateShortLabel(s.alias, { min: 2, max: 24, label: "Username" }).ok
       );
       case 3:  return s.descent.length > 0;
-      case 4:  return s.country.length >= 2;
+      case 4:  {
+        if (s.country.length < 2) return false;
+        // If a city is set, it must match the country list (or country is 'Other')
+        if (!s.city) return true;
+        if (s.country === "OT") return true;
+        const cities = CITIES_BY_COUNTRY[s.country] ?? [];
+        if (cities.length === 0) return true; // no curated list — allow anything
+        return cities.includes(s.city);
+      }
       case 5:  return s.experienceTags.length >= 1;
       case 6:  return true;
-      case 7:  return s.prompts.filter((p) => validateMeaningful(p.answer, { minChars: 8, minWords: 2 }).ok).length >= 2;
+      case 7:  return s.prompts.filter((p) => {
+        const rule = getPromptValidationRule(p.question, promptLibrary);
+        return validateMeaningful(p.answer, rule).ok;
+      }).length >= 2;
       case 8:  return true;
       case 9:  return s.idStatus === "verified";
       case 10: return s.cocAccepted;
@@ -221,6 +286,12 @@ export default function Onboarding() {
           }
 
           setSaving(false);
+          // Clear restored state — onboarding is complete
+          try {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(STEP_KEY);
+            localStorage.removeItem("ct_pending_profile");
+          } catch {}
           router.push("/profile");
           return;
         }
@@ -580,23 +651,22 @@ function StepIdentity({ s, patch }: { s: State; patch: (p: Partial<State>) => vo
 }
 
 function StepRoots({ s, patch }: { s: State; patch: (p: Partial<State>) => void }) {
-  function toggle(arr: string[], v: string) {
-    return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
-  }
-  const descents = ["Ghanaian","Nigerian","Jamaican","Trinidadian","Kenyan","Zimbabwean","South African","Ethiopian","Somali","Sudanese","Senegalese","British","American","Brazilian","Other"];
-
   return (
     <div>
       <div className="text-forest mb-3"><Ubuntu size={48} /></div>
-      <StepHeader kicker="Step 3 · Roots" title="Where are your people from?" body="Pick all that feel like you." />
-      <Field label="Heritage / descent" required>
-        <div className="flex flex-wrap gap-2">
-          {descents.map((d) => (
-            <Chip key={d} as="button" active={s.descent.includes(d)} onClick={() => patch({ descent: toggle(s.descent, d) })}>
-              {d}
-            </Chip>
-          ))}
-        </div>
+      <StepHeader
+        kicker="Step 3 · Roots"
+        title="Where are your people from?"
+        body="Pick everything that feels like you — multiple heritages are welcome, and you can type your own if it's not listed."
+      />
+      <Field label="Heritage / descent" required hint="Add as many as feel right. Mixed heritage is a first-class option here.">
+        <TagPicker
+          value={s.descent}
+          onChange={(v) => patch({ descent: v })}
+          options={HERITAGE_OPTIONS}
+          placeholder="Type to search — e.g. Ghanaian, Trinidadian, Mixed heritage…"
+          itemLabel="Heritage"
+        />
       </Field>
 
       <div className="h-6" />
@@ -622,7 +692,31 @@ function StepRoots({ s, patch }: { s: State; patch: (p: Partial<State>) => void 
   );
 }
 
+function countryLabelFromCode(code: string): string {
+  const map: Record<string, string> = {
+    GB: "United Kingdom", US: "United States", CA: "Canada",
+    NG: "Nigeria", GH: "Ghana", JM: "Jamaica", ZA: "South Africa",
+    KE: "Kenya", ZW: "Zimbabwe", OT: "the chosen country",
+  };
+  return map[code] ?? code;
+}
+
 function StepLocation({ s, patch }: { s: State; patch: (p: Partial<State>) => void }) {
+  const citiesForCountry = CITIES_BY_COUNTRY[s.country] ?? [];
+  const cityIsValid = !s.city
+    || citiesForCountry.includes(s.city)
+    || s.country === "OT"; // 'Other / prefer not to say' allows free text
+
+  function onCountryChange(newCountry: string) {
+    // Reset city if it doesn't belong to the new country (and the new country has a list)
+    const validCities = CITIES_BY_COUNTRY[newCountry] ?? [];
+    const stillValid = s.city && validCities.includes(s.city);
+    patch({
+      country: newCountry,
+      city: stillValid ? s.city : "",
+    });
+  }
+
   return (
     <div>
       <StepHeader
@@ -631,7 +725,7 @@ function StepLocation({ s, patch }: { s: State; patch: (p: Partial<State>) => vo
         body="Country is shown on your card. City is optional — if you live somewhere small, we recommend keeping it private."
       />
       <Field label="Country" required>
-        <Select value={s.country} onChange={(e) => patch({ country: e.target.value })}>
+        <Select value={s.country} onChange={(e) => onCountryChange(e.target.value)}>
           <option value="GB">United Kingdom</option>
           <option value="US">United States</option>
           <option value="CA">Canada</option>
@@ -645,8 +739,25 @@ function StepLocation({ s, patch }: { s: State; patch: (p: Partial<State>) => vo
         </Select>
       </Field>
       <div className="h-5" />
-      <Field label="City (optional)" hint="Helps with location matches">
-        <Input value={s.city} onChange={(e) => patch({ city: e.target.value })} placeholder="e.g. London" />
+      <Field
+        label="City (optional)"
+        hint={
+          citiesForCountry.length > 0
+            ? "Pick from the list — these match your selected country."
+            : "Type your city."
+        }
+        error={!cityIsValid ? `That city doesn't appear to be in ${countryLabelFromCode(s.country)}.` : undefined}
+      >
+        {citiesForCountry.length > 0 ? (
+          <Select value={s.city} onChange={(e) => patch({ city: e.target.value })}>
+            <option value="">— Choose your city (optional) —</option>
+            {citiesForCountry.map((city) => (
+              <option key={city} value={city}>{city}</option>
+            ))}
+          </Select>
+        ) : (
+          <Input value={s.city} onChange={(e) => patch({ city: e.target.value })} placeholder="e.g. London" />
+        )}
       </Field>
       <label className="mt-3 inline-flex items-center gap-2 text-sm text-ink2">
         <input
@@ -781,9 +892,10 @@ function StepPrompts({ s, patch }: { s: State; patch: (p: Partial<State>) => voi
     patch({ prompts: next });
   }
   function get(q: string) { return s.prompts.find((p) => p.question === q)?.answer ?? ""; }
-  const answered = s.prompts.filter((p) =>
-    validateMeaningful(p.answer, { minChars: 8, minWords: 2 }).ok
-  ).length;
+  const answered = s.prompts.filter((p) => {
+    const rule = getPromptValidationRule(p.question, promptLibrary);
+    return validateMeaningful(p.answer, rule).ok;
+  }).length;
 
   return (
     <div>
@@ -802,11 +914,21 @@ function StepPrompts({ s, patch }: { s: State; patch: (p: Partial<State>) => voi
               {g.prompts.map((q) => {
                 const answer = get(q);
                 const hasText = answer.trim().length > 0;
+                const rule = getPromptValidationRule(q, promptLibrary);
                 const validation = hasText
-                  ? validateMeaningful(answer, { minChars: 8, minWords: 2 })
+                  ? validateMeaningful(answer, rule)
                   : { ok: true as const };
+                const hint =
+                  rule.minWords === 1 ? "A word or two is fine." :
+                  rule.minWords === 2 ? "At least a short sentence." :
+                  "Take a moment — a few sentences works best.";
                 return (
-                  <Field key={q} label={q} error={validation.ok ? undefined : validation.reason}>
+                  <Field
+                    key={q}
+                    label={q}
+                    hint={hint}
+                    error={validation.ok ? undefined : validation.reason}
+                  >
                     <Textarea
                       rows={2}
                       value={answer}
@@ -830,6 +952,9 @@ function StepPrompts({ s, patch }: { s: State; patch: (p: Partial<State>) => voi
 }
 
 function StepAvatar({ s, patch }: { s: State; patch: (p: Partial<State>) => void }) {
+  const { userId } = useSession();
+  const { data: media = [] } = useProfileMedia(userId);
+
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
@@ -840,10 +965,13 @@ function StepAvatar({ s, patch }: { s: State; patch: (p: Partial<State>) => void
   return (
     <div>
       <StepHeader
-        kicker="Step 8 · A face for the room"
-        title="A photo helps people land."
-        body="A real photo is encouraged — but a portrait, illustration, or symbol is fine too. You can skip this and add one later."
+        kicker="Step 8 · Photos & videos"
+        title="A face for the room — and a glimpse of your world."
+        body="Pick a profile photo first. You can also add a few photos or videos to your gallery now (or skip and add later)."
       />
+
+      {/* Avatar */}
+      <p className="eyebrow mb-3">Profile photo</p>
       <div className="flex items-center gap-5">
         <div
           className="h-24 w-24 rounded-full overflow-hidden border border-line flex items-center justify-center"
@@ -860,6 +988,25 @@ function StepAvatar({ s, patch }: { s: State; patch: (p: Partial<State>) => void
           <input type="file" accept="image/*" capture="user" className="hidden" onChange={onPick} />
         </label>
       </div>
+
+      {/* Gallery */}
+      {userId && (
+        <div className="mt-10">
+          <p className="eyebrow mb-3">Gallery (optional)</p>
+          <p className="text-sm text-ink2 mb-3 max-w-prose">
+            Add a few photos or short videos that say something about you — a
+            view from your window, a meal that means something, a place that
+            grounds you. Up to 20 items.
+          </p>
+          <MediaUploader existing={media} ownerId={userId} />
+          {media.length > 0 && (
+            <div className="mt-5">
+              <p className="eyebrow mb-2">Your gallery so far</p>
+              <MediaGallery items={media} ownerId={userId} canEdit />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

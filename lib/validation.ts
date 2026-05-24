@@ -34,6 +34,22 @@ export function validateMeaningful(
   return { ok: true };
 }
 
+/**
+ * Per-prompt minimum content rules. Light prompts accept short answers
+ * ("home" for "What anchors you?"). Medium need a sentence. Heavy expect
+ * a thought-out paragraph. The bucket is inferred from which array the
+ * question lives in inside `promptLibrary` (lib/mock-data.ts).
+ */
+export function getPromptValidationRule(
+  question: string,
+  library: { light: string[]; medium: string[]; heavy: string[] }
+): { minChars: number; minWords: number } {
+  if (library.heavy.includes(question))  return { minChars: 30, minWords: 5 };
+  if (library.medium.includes(question)) return { minChars: 12, minWords: 2 };
+  // light or unknown — accept short single-word answers
+  return { minChars: 4, minWords: 1 };
+}
+
 /** Best for short fields like alias or custom language: 2–N chars, contains letter/digit. */
 export function validateShortLabel(
   text: string | null | undefined,

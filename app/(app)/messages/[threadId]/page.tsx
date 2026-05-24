@@ -14,6 +14,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { SafeguardingBanner } from "@/components/messages/SafeguardingBanner";
+import { PrivacyShield } from "@/components/privacy/PrivacyShield";
 import { timeAgo } from "@/lib/utils";
 
 type ThreadMeta = {
@@ -25,7 +26,8 @@ type ThreadMeta = {
 
 export default function ThreadView() {
   const params = useParams<{ threadId: string }>();
-  const { userId: me } = useSession();
+  const { userId: me, profile: myProfile } = useSession();
+  const myAlias = myProfile?.alias ?? "member";
   const { data: messages = [] } = useThreadMessages(params.threadId);
   const sendMsg = useSendDm();
   const markRead = useMarkThreadRead();
@@ -131,57 +133,59 @@ export default function ThreadView() {
         <SafeguardingBanner />
       </div>
 
-      {/* Messages */}
-      <div className="surface p-4 flex flex-col h-[60dvh] min-h-[400px]">
-        <ul className="flex-1 overflow-y-auto space-y-3 pr-1">
-          {messages.length === 0 ? (
-            <li className="text-center text-ink3 text-sm py-10">
-              No messages yet. Say something kind.
-            </li>
-          ) : (
-            messages.map((m) => {
-              const mine = m.sender_id === me;
-              return (
-                <li key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[15px] leading-relaxed whitespace-pre-wrap ${
-                      mine
-                        ? "bg-ink text-bone rounded-br-md"
-                        : "bg-bone text-ink border border-line rounded-bl-md"
-                    }`}
-                  >
-                    {m.body}
-                    <div className={`mt-1 text-[10px] ${mine ? "text-bone/60" : "text-ink3"}`}>
-                      {timeAgo(m.created_at)}
+      {/* Messages — wrapped with PrivacyShield for screenshot deterrence */}
+      <PrivacyShield watermark={`@${myAlias}`} className="rounded-md">
+        <div className="surface p-4 flex flex-col h-[60dvh] min-h-[400px]">
+          <ul className="flex-1 overflow-y-auto space-y-3 pr-1">
+            {messages.length === 0 ? (
+              <li className="text-center text-ink3 text-sm py-10">
+                No messages yet. Say something kind.
+              </li>
+            ) : (
+              messages.map((m) => {
+                const mine = m.sender_id === me;
+                return (
+                  <li key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[15px] leading-relaxed whitespace-pre-wrap ${
+                        mine
+                          ? "bg-ink text-bone rounded-br-md"
+                          : "bg-bone text-ink border border-line rounded-bl-md"
+                      }`}
+                    >
+                      {m.body}
+                      <div className={`mt-1 text-[10px] ${mine ? "text-bone/60" : "text-ink3"}`}>
+                        {timeAgo(m.created_at)}
+                      </div>
                     </div>
-                  </div>
-                </li>
-              );
-            })
-          )}
-          <div ref={bottomRef} />
-        </ul>
+                  </li>
+                );
+              })
+            )}
+            <div ref={bottomRef} />
+          </ul>
 
-        <div className="mt-3 pt-3 border-t border-line flex items-end gap-2">
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Write a message…"
-            rows={1}
-            maxLength={5000}
-            className="flex-1 bg-transparent border-0 outline-none text-[15px] resize-none"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                send();
-              }
-            }}
-          />
-          <Button size="sm" onClick={send} disabled={sendMsg.isPending || !draft.trim()}>
-            {sendMsg.isPending ? "…" : "Send"}
-          </Button>
+          <div className="mt-3 pt-3 border-t border-line flex items-end gap-2">
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Write a message…"
+              rows={1}
+              maxLength={5000}
+              className="flex-1 bg-transparent border-0 outline-none text-[15px] resize-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  send();
+                }
+              }}
+            />
+            <Button size="sm" onClick={send} disabled={sendMsg.isPending || !draft.trim()}>
+              {sendMsg.isPending ? "…" : "Send"}
+            </Button>
+          </div>
         </div>
-      </div>
+      </PrivacyShield>
     </div>
   );
 }

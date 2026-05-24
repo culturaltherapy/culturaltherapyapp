@@ -484,6 +484,97 @@ export const LANGUAGE_OPTIONS = [
 ];
 
 // Social link platforms — each profile can have any/all of these.
+// ─────────────────────────────────────────────────────────────────────────────
+// Heritage / descent — comprehensive list. Mixed-race friendly (pick multiple),
+// curated to reflect African, Caribbean, South Asian, East Asian, Middle Eastern,
+// European, and Indigenous heritages. Users can also add their own.
+// ─────────────────────────────────────────────────────────────────────────────
+export const HERITAGE_OPTIONS = [
+  // West African
+  "Ghanaian", "Nigerian", "Sierra Leonean", "Liberian", "Senegalese", "Gambian",
+  "Malian", "Ivorian", "Togolese", "Beninese", "Cameroonian", "Burkinabé", "Guinean",
+  // East African
+  "Kenyan", "Tanzanian", "Ugandan", "Rwandan", "Burundian", "Ethiopian", "Eritrean",
+  "Somali", "Sudanese", "South Sudanese", "Djiboutian", "Mauritian", "Malagasy",
+  // Central African
+  "Congolese (DRC)", "Congolese (Brazzaville)", "Angolan", "Mozambican", "Chadian",
+  "Central African", "Gabonese", "Equatorial Guinean",
+  // Southern African
+  "South African", "Zimbabwean", "Zambian", "Namibian", "Botswanan", "Lesothan",
+  "Swazi", "Malawian",
+  // North African
+  "Egyptian", "Moroccan", "Algerian", "Tunisian", "Libyan", "Mauritanian",
+  // Caribbean
+  "Jamaican", "Trinidadian", "Bajan (Barbadian)", "Grenadian", "Vincentian",
+  "St Lucian", "Haitian", "Dominican (Dominica)", "Dominican (DR)", "Cuban",
+  "Puerto Rican", "Bahamian", "Antiguan", "Kittitian (St Kitts)", "Guyanese",
+  "Surinamese", "Belizean", "Cayman", "Turks & Caicos",
+  // Latin American
+  "Brazilian", "Colombian", "Venezuelan", "Mexican", "Peruvian", "Chilean",
+  "Argentine", "Bolivian", "Ecuadorian", "Honduran", "Salvadoran", "Guatemalan",
+  "Panamanian", "Costa Rican", "Nicaraguan", "Uruguayan", "Paraguayan",
+  "Afro-Latin", "Afro-Brazilian", "Afro-Caribbean",
+  // South Asian
+  "Indian", "Pakistani", "Bangladeshi", "Sri Lankan", "Nepali", "Bhutanese",
+  "Maldivian", "Punjabi", "Tamil", "Gujarati", "Bengali", "Sindhi", "Kashmiri",
+  // East Asian
+  "Chinese", "Hong Kong", "Taiwanese", "Japanese", "Korean", "Mongolian", "Tibetan",
+  // South-East Asian
+  "Filipino", "Vietnamese", "Thai", "Indonesian", "Malaysian", "Singaporean",
+  "Cambodian", "Laotian", "Burmese", "Timorese",
+  // Middle Eastern
+  "Lebanese", "Syrian", "Palestinian", "Jordanian", "Iraqi", "Iranian", "Yemeni",
+  "Saudi", "Emirati", "Kuwaiti", "Qatari", "Bahraini", "Omani", "Turkish",
+  "Kurdish", "Israeli", "Druze", "Assyrian",
+  // European
+  "British", "Irish", "Scottish", "Welsh", "English", "French", "German", "Italian",
+  "Spanish", "Portuguese", "Dutch", "Belgian", "Swiss", "Austrian", "Polish",
+  "Czech", "Slovak", "Hungarian", "Romanian", "Bulgarian", "Greek", "Cypriot",
+  "Albanian", "Serbian", "Croatian", "Bosnian", "Slovenian", "Macedonian",
+  "Russian", "Ukrainian", "Belarusian", "Lithuanian", "Latvian", "Estonian",
+  "Finnish", "Swedish", "Norwegian", "Danish", "Icelandic", "Maltese",
+  // North American
+  "American", "African American", "Black American", "Canadian", "African Canadian",
+  // Indigenous
+  "Native American", "First Nations (Canada)", "Métis", "Inuit", "Native Hawaiian",
+  "Indigenous Australian", "Māori", "Pacific Islander", "Samoan", "Fijian", "Tongan",
+  // Diaspora / mixed identifiers
+  "Mixed heritage", "Mixed Black & White", "Mixed Black & Asian", "Mixed Asian & White",
+  "Black British", "British Asian", "Black European", "Afropean",
+  "Diaspora (other)",
+];
+
+// Curated city list per country (top ~15 in each). Users can still type a
+// custom city if theirs isn't listed.
+export const CITIES_BY_COUNTRY: Record<string, string[]> = {
+  GB: ["London", "Manchester", "Birmingham", "Leeds", "Liverpool", "Sheffield",
+       "Bristol", "Newcastle", "Nottingham", "Leicester", "Glasgow", "Edinburgh",
+       "Cardiff", "Belfast", "Brighton", "Oxford", "Cambridge", "Reading",
+       "Coventry", "Wolverhampton", "Bradford", "Croydon", "Luton", "Hackney"],
+  US: ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia",
+       "San Antonio", "San Diego", "Dallas", "Austin", "Jacksonville", "Fort Worth",
+       "Columbus", "Indianapolis", "Charlotte", "San Francisco", "Seattle", "Denver",
+       "Washington DC", "Boston", "Detroit", "Atlanta", "Miami", "Minneapolis",
+       "New Orleans", "Baltimore", "Portland", "Las Vegas", "Memphis"],
+  CA: ["Toronto", "Montreal", "Vancouver", "Calgary", "Edmonton", "Ottawa",
+       "Winnipeg", "Quebec City", "Hamilton", "Brampton", "Mississauga", "Halifax",
+       "Surrey", "Markham", "Victoria"],
+  NG: ["Lagos", "Abuja", "Kano", "Ibadan", "Port Harcourt", "Benin City", "Kaduna",
+       "Onitsha", "Aba", "Maiduguri", "Enugu", "Jos", "Ilorin", "Owerri",
+       "Calabar", "Uyo", "Abeokuta", "Akure", "Warri", "Sokoto"],
+  GH: ["Accra", "Kumasi", "Tamale", "Takoradi", "Tema", "Sunyani", "Cape Coast",
+       "Koforidua", "Ho", "Wa", "Bolgatanga", "Sekondi", "Madina", "Obuasi"],
+  JM: ["Kingston", "Spanish Town", "Portmore", "Montego Bay", "Mandeville",
+       "May Pen", "Old Harbour", "Linstead", "Ocho Rios", "Negril"],
+  ZA: ["Johannesburg", "Cape Town", "Durban", "Pretoria", "Port Elizabeth",
+       "Bloemfontein", "East London", "Pietermaritzburg", "Polokwane", "Nelspruit",
+       "Kimberley", "Soweto"],
+  KE: ["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret", "Thika", "Malindi",
+       "Kitale", "Garissa", "Kakamega", "Machakos", "Meru"],
+  ZW: ["Harare", "Bulawayo", "Chitungwiza", "Mutare", "Gweru", "Kwekwe", "Kadoma",
+       "Masvingo", "Chinhoyi", "Marondera"],
+};
+
 export const SOCIAL_PLATFORMS = [
   { value: "instagram", label: "Instagram", prefix: "https://instagram.com/" },
   { value: "twitter",   label: "X / Twitter", prefix: "https://x.com/" },
@@ -497,33 +588,53 @@ export const SOCIAL_PLATFORMS = [
 export const codeOfConduct = [
   {
     id: "coc1",
-    title: "Lived experience first",
-    body: "We lead with story, not status. No 'expert' poses; no diagnoses imposed."
+    title: "Lived experience comes first",
+    body: "Cultural Therapy is built on the belief that the people who've lived through mental health challenges have the most valuable knowledge to share. When you post, comment, or message someone here, lead with your own story — not a position of authority over theirs. Don't diagnose other members. Don't tell people what they 'really' have. Speak from where you've stood."
   },
   {
     id: "coc2",
-    title: "Confidentiality is the floor",
-    body: "What's said in your Tribe stays in your Tribe. Screenshots are a red line."
+    title: "What's said here, stays here",
+    body: "Conversations inside Tribes, Villages, direct messages, and threads are private to the people in them. Do not share, copy, paste, repost, or describe what other members say — anywhere outside this app. This includes social media, group chats, family conversations, and journalism. The app will display the viewer's username faintly across sensitive screens; if a screenshot ever surfaces, it will identify the person who took it. Breaching confidentiality is one of the fastest routes to having your account permanently removed."
   },
   {
     id: "coc3",
-    title: "Crisis isn't a debate",
-    body: "If a member names crisis, we surface resources and call a mod. We do not argue."
+    title: "Crisis is not a discussion",
+    body: "If another member names that they're in crisis — actively suicidal, in danger, or in immediate distress — your job is not to debate, evaluate, or fix. Use the crisis button at the top of every page to surface professional resources, and report the conversation so a trained moderator can step in within 15 minutes. We are peers, not clinicians. The moderator on call exists for exactly this reason."
   },
   {
     id: "coc4",
     title: "No content from machines",
-    body: "Posts, comments and prompts are written by you. AI for accessibility (transcript, translation) is fine."
+    body: "All posts, comments, prompt answers, profile bios, and messages should be written by you — a human. Using artificial intelligence to generate the substance of what you say to another member breaks the trust this network depends on. Using accessibility tools (live transcription, screen readers, translation between languages you actually speak) is fine and encouraged. If we detect AI-generated content posing as personal experience, we will remove it and may suspend the account."
   },
   {
     id: "coc5",
-    title: "Names, not diagnoses",
-    body: "Ask before labeling. Self-description is the default; clinical labels are opt-in."
+    title: "Self-description over clinical labels",
+    body: "Use language that the person uses about themselves. If a member describes themselves as 'living with bipolar', call them that — not 'a bipolar person'. Don't slap clinical terms onto people who haven't claimed them. Don't ask someone to disclose their diagnosis unless they've said they're open to it. Lived experience is not an identity check."
   },
   {
     id: "coc6",
-    title: "Mods can join your room",
-    body: "Audio rooms can be silently joined by an on-call mod. It's how we keep this safe."
+    title: "Moderators may quietly observe",
+    body: "Trained moderators may silently join Village audio rooms and read public Tribe threads as part of keeping the space safe — they do not announce their presence. They never join 1-on-1 direct messages or Village text threads unless something has been reported. Moderators may message you directly if a safeguarding concern is raised. Their role is to protect members, not to surveil them."
+  },
+  {
+    id: "coc7",
+    title: "No harassment, hate, or discrimination",
+    body: "Slurs, hate speech, sexual harassment, threats, doxxing (sharing someone's real-world details), persistent unwanted contact, or any conduct targeting a member based on race, ethnicity, religion, gender, sexuality, disability, age, body, or background — will result in account suspension or removal. Disagreement is fine; cruelty is not. If you witness it, report it."
+  },
+  {
+    id: "coc8",
+    title: "Don't share personal contact details in chat",
+    body: "Don't share — or ask another member to share — their phone number, home address, financial details, government ID, or any information a stranger could use to find or harm them. Keep conversations inside the app where moderators can see context if something goes wrong. Voice and video calls are only available between accredited peer supporters and the members they work with."
+  },
+  {
+    id: "coc9",
+    title: "Reporting and consequences",
+    body: "Every post, comment, message, and audio room has a 'report' option. Reports go to a human moderator and are reviewed within 15 minutes during peak hours. Depending on what we find, action ranges from a private warning, to content removal, to temporary suspension, to permanent account removal. Repeated reports about your conduct, even if individually minor, will trigger a review. Decisions can be appealed by emailing support."
+  },
+  {
+    id: "coc10",
+    title: "Legal and terms",
+    body: "By accepting this code of conduct you also accept Cultural Therapy's terms of service and privacy policy. You confirm you are 18 or older. You agree that we may store the information you provide during onboarding (including your real name for safeguarding purposes — never shown publicly), and may share information with emergency services where there is a credible threat to life. You may request access to or deletion of your account at any time from Settings. Your relationship with this service is governed by the laws of England and Wales."
   }
 ];
 

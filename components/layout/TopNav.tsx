@@ -10,6 +10,7 @@ import { me } from "@/lib/mock-data";
 import { useSession } from "@/lib/hooks/useSession";
 import { useUnreadCount } from "@/lib/hooks/useNotifications";
 import { NotificationsPanel } from "@/components/notifications/NotificationsPanel";
+import { UserMenu } from "@/components/layout/UserMenu";
 
 const navItems = [
   { href: "/home",        label: "Home" },
@@ -82,9 +83,7 @@ export function TopNav() {
             <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
           </div>
 
-          <Link href="/profile" aria-label="My profile">
-            <Avatar name={alias} color={avatarColor} size={36} src={avatarUrl} />
-          </Link>
+          <UserMenu alias={alias} avatarColor={avatarColor} avatarUrl={avatarUrl} />
         </div>
       </div>
     </header>
