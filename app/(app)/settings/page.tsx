@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { Modal } from "@/components/ui/Modal";
+import { queueAccountEmail } from "@/lib/email-queue";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -235,14 +236,13 @@ function DeactivateAccount({ userId, email, deactivatedAt }: {
       const { error } = await supa.from("profiles").update({ deactivated_at: next }).eq("id", userId);
       if (error) throw error;
 
-      // Queue a confirmation email (real send happens in an Edge Function).
       if (email) {
-        await (supa as any).from("account_email_queue").insert({
-          user_id: userId,
-          to_email: email,
+        await queueAccountEmail({
+          userId,
+          toEmail: email,
           template: isDeactivated ? "account_reactivated" : "account_deactivated",
           payload: { at: new Date().toISOString() },
-        }).then(() => undefined, () => undefined); // non-blocking
+        });
       }
 
       if (!isDeactivated) {
@@ -335,12 +335,12 @@ function DeleteAccountRequest({ userId, email }: { userId: string | null; email:
       if (error) throw error;
 
       if (email) {
-        await (supa as any).from("account_email_queue").insert({
-          user_id: userId,
-          to_email: email,
+        await queueAccountEmail({
+          userId,
+          toEmail: email,
           template: "deletion_requested",
           payload: { reason: reason.trim() || null, at: new Date().toISOString() },
-        }).then(() => undefined, () => undefined);
+        });
       }
 
       setDone(true);
