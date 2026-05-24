@@ -10,6 +10,7 @@ import {
   experienceTagPool,
   promptLibrary,
   LANGUAGE_OPTIONS,
+  HERITAGE_OPTIONS,
   SOCIAL_PLATFORMS,
 } from "@/lib/mock-data";
 import { Button } from "@/components/ui/Button";
@@ -18,6 +19,7 @@ import { Chip } from "@/components/ui/Chip";
 import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { LanguagePicker } from "@/components/ui/LanguagePicker";
+import { TagPicker } from "@/components/ui/TagPicker";
 import { validateMeaningful, validateShortLabel } from "@/lib/validation";
 import { useProfileMedia } from "@/lib/hooks/useProfileMedia";
 import { MediaUploader } from "@/components/media/MediaUploader";
@@ -36,11 +38,8 @@ type SectionKey =
   | "social"
   | "contact";
 
-const DESCENT_OPTIONS = [
-  "Ghanaian", "Nigerian", "Jamaican", "Trinidadian", "Kenyan",
-  "Zimbabwean", "South African", "Ethiopian", "Somali", "Sudanese",
-  "Senegalese", "British", "American", "Brazilian", "Other"
-];
+// DESCENT_OPTIONS removed — RootsEditor now uses TagPicker with the
+// comprehensive HERITAGE_OPTIONS list from lib/mock-data.ts.
 
 const COUNTRY_OPTIONS = [
   { value: "GB", label: "United Kingdom" },
@@ -451,14 +450,18 @@ function RootsEditor({ userId, profile, onSaved }: { userId: string; profile: an
       onSaved={onSaved}
       disabled={descent.length === 0}
     >
-      <Field label="Heritage / descent" required>
-        <div className="flex flex-wrap gap-2">
-          {DESCENT_OPTIONS.map((d) => (
-            <Chip key={d} as="button" active={descent.includes(d)} onClick={() => toggle(descent, d, setDescent)}>
-              {d}
-            </Chip>
-          ))}
-        </div>
+      <Field
+        label="Heritage / descent"
+        required
+        hint="Add as many as feel right. Mixed heritage is a first-class option."
+      >
+        <TagPicker
+          value={descent}
+          onChange={setDescent}
+          options={HERITAGE_OPTIONS}
+          placeholder="Type to search — e.g. Ghanaian, Trinidadian, Mixed heritage…"
+          itemLabel="Heritage"
+        />
       </Field>
 
       <Field label="Languages you speak" hint="The ones you can hold a conversation in.">
