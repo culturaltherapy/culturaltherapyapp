@@ -44,8 +44,10 @@ export function TagPicker({
 
   const q = query.trim().toLowerCase();
   const filtered = React.useMemo(() => {
+    // No dropdown until the user starts typing — avoids the
+    // "random list of African countries" first-look problem.
+    if (!q) return [];
     const remaining = options.filter((o) => !value.includes(o));
-    if (!q) return remaining.slice(0, maxSuggestions);
     return remaining
       .filter((o) => o.toLowerCase().includes(q))
       .slice(0, maxSuggestions);

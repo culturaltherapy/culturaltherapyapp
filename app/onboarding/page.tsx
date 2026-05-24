@@ -14,11 +14,13 @@ import {
   experienceTagPool,
   promptLibrary,
   HERITAGE_OPTIONS,
+  COUNTRY_OPTIONS,
   CITIES_BY_COUNTRY,
 } from "@/lib/mock-data";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { LanguagePicker } from "@/components/ui/LanguagePicker";
 import { TagPicker } from "@/components/ui/TagPicker";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { MediaUploader } from "@/components/media/MediaUploader";
 import { MediaGallery } from "@/components/media/MediaGallery";
 import { useProfileMedia } from "@/lib/hooks/useProfileMedia";
@@ -86,7 +88,7 @@ export default function Onboarding() {
     descent: [],
     languages: [],
     languagesUnderstood: [],
-    country: "GB",
+    country: "",
     city: "",
     shareCity: true,
     experienceTags: [],
@@ -269,10 +271,9 @@ export default function Onboarding() {
       );
       case 3:  return s.descent.length > 0;
       case 4:  {
-        if (s.country.length < 2) return false;
-        // If a city is set, it must match the country list (or country is 'Other')
+        if (!s.country.trim()) return false;
         if (!s.city) return true;
-        if (s.country === "OT") return true;
+        if (s.country === "Other / prefer not to say") return true;
         const cities = CITIES_BY_COUNTRY[s.country] ?? [];
         if (cities.length === 0) return true; // no curated list — allow anything
         return cities.includes(s.city);
@@ -796,23 +797,11 @@ function StepRoots({ s, patch }: { s: State; patch: (p: Partial<State>) => void 
   );
 }
 
-function countryLabelFromCode(code: string): string {
-  const map: Record<string, string> = {
-    GB: "United Kingdom", US: "United States", CA: "Canada",
-    NG: "Nigeria", GH: "Ghana", JM: "Jamaica", ZA: "South Africa",
-    KE: "Kenya", ZW: "Zimbabwe", OT: "the chosen country",
-  };
-  return map[code] ?? code;
-}
-
 function StepLocation({ s, patch }: { s: State; patch: (p: Partial<State>) => void }) {
   const citiesForCountry = CITIES_BY_COUNTRY[s.country] ?? [];
-  const cityIsValid = !s.city
-    || citiesForCountry.includes(s.city)
-    || s.country === "OT"; // 'Other / prefer not to say' allows free text
 
   function onCountryChange(newCountry: string) {
-    // Reset city if it doesn't belong to the new country (and the new country has a list)
+    // Reset city if it doesn't belong to the new country
     const validCities = CITIES_BY_COUNTRY[newCountry] ?? [];
     const stillValid = s.city && validCities.includes(s.city);
     patch({
@@ -828,31 +817,28 @@ function StepLocation({ s, patch }: { s: State; patch: (p: Partial<State>) => vo
         title="Country, and a city if you want to share."
         body="Country is shown on your card. City is optional — if you live somewhere small, we recommend keeping it private."
       />
-      <Field label="Country" required>
-        <Select value={s.country} onChange={(e) => onCountryChange(e.target.value)}>
-          <option value="GB">United Kingdom</option>
-          <option value="US">United States</option>
-          <option value="CA">Canada</option>
-          <option value="NG">Nigeria</option>
-          <option value="GH">Ghana</option>
-          <option value="JM">Jamaica</option>
-          <option value="ZA">South Africa</option>
-          <option value="KE">Kenya</option>
-          <option value="ZW">Zimbabwe</option>
-          <option value="OT">Other / prefer not to say</option>
-        </Select>
+      <Field label="Country" required hint="Type to search any country.">
+        <SearchableSelect
+          value={s.country}
+          onChange={onCountryChange}
+          options={COUNTRY_OPTIONS}
+          placeholder="Type to search — e.g. United Kingdom, Ghana, Brazil…"
+        />
       </Field>
       <div className="h-5" />
       <Field
         label="City (optional)"
         hint={
-          citiesForCountry.length > 0
-            ? "Pick from the list — these match your selected country."
-            : "Type your city."
+          !s.country
+            ? "Pick a country first."
+            : citiesForCountry.length > 0
+              ? `Pick from the list — these match ${s.country}.`
+              : "Type your city."
         }
-        error={!cityIsValid ? `That city doesn't appear to be in ${countryLabelFromCode(s.country)}.` : undefined}
       >
-        {citiesForCountry.length > 0 ? (
+        {!s.country ? (
+          <Input value="" disabled placeholder="Select a country above first" />
+        ) : citiesForCountry.length > 0 ? (
           <Select value={s.city} onChange={(e) => patch({ city: e.target.value })}>
             <option value="">— Choose your city (optional) —</option>
             {citiesForCountry.map((city) => (

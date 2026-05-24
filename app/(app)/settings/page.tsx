@@ -8,6 +8,7 @@ import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
+import { Modal } from "@/components/ui/Modal";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -87,6 +88,7 @@ export default function SettingsPage() {
 
           <DeactivateAccount
             userId={userId}
+            email={email}
             deactivatedAt={(profile as any)?.deactivated_at ?? null}
           />
 
@@ -212,10 +214,15 @@ function ChangePasswordForm() {
 // ──────────────────────────────────────────────────────────────────
 // Deactivate
 // ──────────────────────────────────────────────────────────────────
-function DeactivateAccount({ userId, deactivatedAt }: { userId: string | null; deactivatedAt: string | null }) {
+function DeactivateAccount({ userId, email, deactivatedAt }: {
+  userId: string | null;
+  email: string | null;
+  deactivatedAt: string | null;
+}) {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
   const isDeactivated = !!deactivatedAt;
 
   async function toggle() {
@@ -227,8 +234,18 @@ function DeactivateAccount({ userId, deactivatedAt }: { userId: string | null; d
       const next = isDeactivated ? null : new Date().toISOString();
       const { error } = await supa.from("profiles").update({ deactivated_at: next }).eq("id", userId);
       if (error) throw error;
+
+      // Queue a confirmation email (real send happens in an Edge Function).
+      if (email) {
+        await (supa as any).from("account_email_queue").insert({
+          user_id: userId,
+          to_email: email,
+          template: isDeactivated ? "account_reactivated" : "account_deactivated",
+          payload: { at: new Date().toISOString() },
+        }).then(() => undefined, () => undefined); // non-blocking
+      }
+
       if (!isDeactivated) {
-        // Just deactivated — sign out and go to landing
         await supa.auth.signOut();
         router.push("/");
       } else {
@@ -236,7 +253,10 @@ function DeactivateAccount({ userId, deactivatedAt }: { userId: string | null; d
       }
     } catch (e: any) {
       setErr(e?.message ?? "Couldn't update account.");
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+      setConfirmOpen(false);
+    }
   }
 
   return (
@@ -245,19 +265,45 @@ function DeactivateAccount({ userId, deactivatedAt }: { userId: string | null; d
       <p className="text-sm text-ink2 mt-1">
         {isDeactivated
           ? "Your account is currently hidden from the network. Reactivate to make your profile visible again."
-          : "Hides your profile from the network and from other members. You can come back any time within 30 days to reactivate."}
+          : "Hides your profile from the network and from other members. You can come back any time within 30 days to reactivate. You'll get a confirmation email."}
       </p>
       {err && <p className="text-sm text-crisis mt-2">{err}</p>}
       <div className="mt-3">
         <Button
           variant={isDeactivated ? "primary" : "outline"}
           size="sm"
-          onClick={toggle}
+          onClick={() => (isDeactivated ? toggle() : setConfirmOpen(true))}
           disabled={busy}
         >
           {busy ? "Working…" : isDeactivated ? "Reactivate account" : "Deactivate account"}
         </Button>
       </div>
+
+      <Modal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title="Deactivate your account?"
+        size="sm"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button variant="danger" size="sm" onClick={toggle} disabled={busy}>
+              {busy ? "Deactivating…" : "Yes, deactivate"}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-[15px] leading-relaxed">
+          Your profile will be hidden from the network, your Tribes, and other
+          members. Your data is retained for 30 days so you can come back. We'll
+          send a confirmation to <strong>{email ?? "your inbox"}</strong>.
+        </p>
+        <p className="text-sm text-ink3 mt-3">
+          You'll be signed out immediately after deactivating.
+        </p>
+      </Modal>
     </div>
   );
 }
@@ -268,12 +314,15 @@ function DeactivateAccount({ userId, deactivatedAt }: { userId: string | null; d
 function DeleteAccountRequest({ userId, email }: { userId: string | null; email: string | null }) {
   const [open, setOpen] = React.useState(false);
   const [reason, setReason] = React.useState("");
+  const [confirmText, setConfirmText] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
   const [done, setDone] = React.useState(false);
 
+  const canSubmit = confirmText.trim().toUpperCase() === "DELETE" && !busy;
+
   async function submit() {
-    if (!userId) return;
+    if (!userId || !canSubmit) return;
     setBusy(true); setErr(null);
     try {
       const supa = getSupabaseBrowser();
@@ -284,6 +333,16 @@ function DeleteAccountRequest({ userId, email }: { userId: string | null; email:
         reason: reason.trim() || null,
       });
       if (error) throw error;
+
+      if (email) {
+        await (supa as any).from("account_email_queue").insert({
+          user_id: userId,
+          to_email: email,
+          template: "deletion_requested",
+          payload: { reason: reason.trim() || null, at: new Date().toISOString() },
+        }).then(() => undefined, () => undefined);
+      }
+
       setDone(true);
     } catch (e: any) {
       setErr(e?.message ?? "Couldn't submit request.");
@@ -310,7 +369,15 @@ function DeleteAccountRequest({ userId, email }: { userId: string | null; email:
       </p>
 
       {open ? (
-        <div className="mt-3 rounded-md border border-line p-3 space-y-3">
+        <div className="mt-3 rounded-md border border-crisis/30 bg-crisis/5 p-4 space-y-3">
+          <p className="text-sm text-ink leading-relaxed">
+            <strong>This action is permanent.</strong> Your account, profile,
+            photos, prompts, wall posts, comments, messages, and connections
+            will be deleted from our systems within 30 days. You'll receive a
+            confirmation email at <strong>{email ?? "your inbox"}</strong> once
+            the deletion is complete.
+          </p>
+
           <Field label="Why are you leaving? (optional)" hint="Helps us understand what to improve.">
             <Textarea
               rows={3}
@@ -319,10 +386,24 @@ function DeleteAccountRequest({ userId, email }: { userId: string | null; email:
               maxLength={500}
             />
           </Field>
+
+          <Field
+            label='Type "DELETE" to confirm'
+            hint="In capitals, exactly. This stops accidental submissions."
+          >
+            <Input
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="DELETE"
+            />
+          </Field>
+
           {err && <p className="text-sm text-crisis">{err}</p>}
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button size="sm" variant="danger" onClick={submit} disabled={busy}>
+            <Button variant="outline" size="sm" onClick={() => setOpen(false)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button size="sm" variant="danger" onClick={submit} disabled={!canSubmit}>
               {busy ? "Submitting…" : "Confirm deletion request"}
             </Button>
           </div>

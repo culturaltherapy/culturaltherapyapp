@@ -11,6 +11,8 @@ import {
   promptLibrary,
   LANGUAGE_OPTIONS,
   HERITAGE_OPTIONS,
+  COUNTRY_OPTIONS,
+  CITIES_BY_COUNTRY,
   SOCIAL_PLATFORMS,
 } from "@/lib/mock-data";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +22,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { LanguagePicker } from "@/components/ui/LanguagePicker";
 import { TagPicker } from "@/components/ui/TagPicker";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { validateMeaningful, validateShortLabel } from "@/lib/validation";
 import { useProfileMedia } from "@/lib/hooks/useProfileMedia";
 import { MediaUploader } from "@/components/media/MediaUploader";
@@ -41,18 +44,8 @@ type SectionKey =
 // DESCENT_OPTIONS removed — RootsEditor now uses TagPicker with the
 // comprehensive HERITAGE_OPTIONS list from lib/mock-data.ts.
 
-const COUNTRY_OPTIONS = [
-  { value: "GB", label: "United Kingdom" },
-  { value: "US", label: "United States" },
-  { value: "CA", label: "Canada" },
-  { value: "NG", label: "Nigeria" },
-  { value: "GH", label: "Ghana" },
-  { value: "JM", label: "Jamaica" },
-  { value: "ZA", label: "South Africa" },
-  { value: "KE", label: "Kenya" },
-  { value: "ZW", label: "Zimbabwe" },
-  { value: "OT", label: "Other" }
-];
+// COUNTRY_OPTIONS is now imported from @/lib/mock-data — full list of all
+// UN-recognised countries. City picker reads from CITIES_BY_COUNTRY by name.
 
 export default function EditProfile() {
   const router = useRouter();
@@ -320,8 +313,16 @@ function IdentityEditor({ userId, profile, onSaved }: { userId: string; profile:
   const [birthYear, setBirthYear] = React.useState<string>(
     profile.birth_year != null ? String(profile.birth_year) : "",
   );
-  const [country, setCountry] = React.useState(profile.country ?? "GB");
+  const [country, setCountry] = React.useState(profile.country ?? "");
   const [city, setCity] = React.useState(profile.city ?? "");
+
+  const citiesForCountry = CITIES_BY_COUNTRY[country] ?? [];
+  function onCountryChange(newCountry: string) {
+    const validCities = CITIES_BY_COUNTRY[newCountry] ?? [];
+    const stillValid = city && validCities.includes(city);
+    setCountry(newCountry);
+    if (!stillValid) setCity("");
+  }
 
   const parsedBirthYear = (() => {
     const n = parseInt(birthYear, 10);
@@ -387,13 +388,36 @@ function IdentityEditor({ userId, profile, onSaved }: { userId: string; profile:
           placeholder={`e.g. ${thisYear - 28}`}
         />
       </Field>
-      <Field label="Country">
-        <Select value={country} onChange={(e) => setCountry(e.target.value)}>
-          {COUNTRY_OPTIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-        </Select>
+      <Field label="Country" hint="Type to search any country.">
+        <SearchableSelect
+          value={country}
+          onChange={onCountryChange}
+          options={COUNTRY_OPTIONS}
+          placeholder="Type to search — e.g. United Kingdom, Ghana, Brazil…"
+        />
       </Field>
-      <Field label="City (optional)">
-        <Input value={city} onChange={(e) => setCity(e.target.value)} />
+      <Field
+        label="City (optional)"
+        hint={
+          !country
+            ? "Pick a country first."
+            : citiesForCountry.length > 0
+              ? `Pick from the list — these match ${country}.`
+              : "Type your city."
+        }
+      >
+        {!country ? (
+          <Input value="" disabled placeholder="Select a country above first" />
+        ) : citiesForCountry.length > 0 ? (
+          <Select value={city} onChange={(e) => setCity(e.target.value)}>
+            <option value="">— Choose your city (optional) —</option>
+            {citiesForCountry.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </Select>
+        ) : (
+          <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. London" />
+        )}
       </Field>
     </SaveForm>
   );
