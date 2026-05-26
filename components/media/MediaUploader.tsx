@@ -4,10 +4,14 @@ import * as React from "react";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
-import { useUploadMedia, MAX_MEDIA_ITEMS, type ProfileMedia } from "@/lib/hooks/useProfileMedia";
+import {
+  useUploadMedia,
+  MAX_MEDIA_ITEMS,
+  MAX_FILE_BYTES,
+  type ProfileMedia,
+} from "@/lib/hooks/useProfileMedia";
 
 const ACCEPTED = "image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm";
-const MAX_BYTES = 25 * 1024 * 1024;
 
 type Pending = {
   file: File;
@@ -15,8 +19,15 @@ type Pending = {
   previewUrl: string;
   kind: "image" | "video";
   status: "queued" | "uploading" | "done" | "error";
+  progress: number; // 0-100
   error?: string;
 };
+
+function fmtMB(bytes: number): string {
+  return bytes < 1024 * 1024
+    ? `${(bytes / 1024).toFixed(0)} KB`
+    : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export function MediaUploader({
   existing,
@@ -36,8 +47,12 @@ export function MediaUploader({
     e.target.value = ""; // allow re-selecting the same file
 
     const valid: Pending[] = [];
+    const rejected: { name: string; size: number }[] = [];
     for (const file of files) {
-      if (file.size > MAX_BYTES) continue; // silently skip > 25MB
+      if (file.size > MAX_FILE_BYTES) {
+        rejected.push({ name: file.name, size: file.size });
+        continue;
+      }
       const kind: "image" | "video" = file.type.startsWith("video/") ? "video" : "image";
       valid.push({
         file,
@@ -45,7 +60,15 @@ export function MediaUploader({
         previewUrl: URL.createObjectURL(file),
         kind,
         status: "queued",
+        progress: 0,
       });
+    }
+    if (rejected.length > 0) {
+      const names = rejected.map((r) => `${r.name} (${fmtMB(r.size)})`).join(", ");
+      alert(
+        `These files are larger than 500 MB and weren't added:\n\n${names}\n\n` +
+        `For long videos, please compress first (e.g. handbrake.fr) or trim them.`
+      );
     }
 
     // Don't exceed remaining slots
@@ -57,15 +80,20 @@ export function MediaUploader({
     for (let i = 0; i < pending.length; i++) {
       if (pending[i].status === "done") continue;
       setPending((cur) =>
-        cur.map((p, idx) => (idx === i ? { ...p, status: "uploading" } : p))
+        cur.map((p, idx) => (idx === i ? { ...p, status: "uploading", progress: 0 } : p))
       );
       try {
         await upload.mutateAsync({
           file: pending[i].file,
           caption: pending[i].caption,
+          onProgress: (pct) => {
+            setPending((cur) =>
+              cur.map((p, idx) => (idx === i ? { ...p, progress: Math.round(pct) } : p))
+            );
+          },
         });
         setPending((cur) =>
-          cur.map((p, idx) => (idx === i ? { ...p, status: "done" } : p))
+          cur.map((p, idx) => (idx === i ? { ...p, status: "done", progress: 100 } : p))
         );
       } catch (e: any) {
         setPending((cur) =>
@@ -76,7 +104,7 @@ export function MediaUploader({
     // After all uploaded, clear the done ones
     setTimeout(() => {
       setPending((cur) => cur.filter((p) => p.status !== "done"));
-    }, 800);
+    }, 1200);
   }
 
   function remove(i: number) {
@@ -100,17 +128,22 @@ export function MediaUploader({
           to make room for new uploads.
         </p>
       ) : (
-        <label className="inline-flex items-center gap-2 rounded-md border border-line bg-bone px-4 py-2.5 text-sm cursor-pointer hover:bg-ink/5">
-          <Icon name="plus" size={16} />
-          Choose photos or videos ({remaining} left)
-          <input
-            type="file"
-            accept={ACCEPTED}
-            multiple
-            className="hidden"
-            onChange={onPick}
-          />
-        </label>
+        <div>
+          <label className="inline-flex items-center gap-2 rounded-md border border-line bg-bone px-4 py-2.5 text-sm cursor-pointer hover:bg-ink/5">
+            <Icon name="plus" size={16} />
+            Choose photos or videos ({remaining} left)
+            <input
+              type="file"
+              accept={ACCEPTED}
+              multiple
+              className="hidden"
+              onChange={onPick}
+            />
+          </label>
+          <p className="mt-2 text-xs text-ink3">
+            Up to 500 MB per file. Large videos upload in chunks and resume if your network drops.
+          </p>
+        </div>
       )}
 
       {pending.length > 0 && (
@@ -136,8 +169,8 @@ export function MediaUploader({
               </Field>
               <div className="mt-2 flex items-center justify-between text-xs text-ink3">
                 <span>
-                  {p.status === "queued" && "Queued"}
-                  {p.status === "uploading" && "Uploading…"}
+                  {p.status === "queued" && `Queued · ${fmtMB(p.file.size)}`}
+                  {p.status === "uploading" && `Uploading ${p.progress}% · ${fmtMB(p.file.size)}`}
                   {p.status === "done" && "✓ Uploaded"}
                   {p.status === "error" && <span className="text-crisis">Error: {p.error}</span>}
                 </span>
@@ -147,6 +180,17 @@ export function MediaUploader({
                   </button>
                 )}
               </div>
+
+              {(p.status === "uploading" || p.status === "done") && (
+                <div className="mt-2 h-1.5 w-full rounded-pill bg-line overflow-hidden">
+                  <div
+                    className={`h-full rounded-pill transition-[width] duration-200 ${
+                      p.status === "done" ? "bg-forest" : "bg-terracotta"
+                    }`}
+                    style={{ width: `${p.progress}%` }}
+                  />
+                </div>
+              )}
             </li>
           ))}
         </ul>

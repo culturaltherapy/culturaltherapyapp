@@ -1,8 +1,54 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Upload as TusUpload } from "tus-js-client";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 
 export const MAX_MEDIA_ITEMS = 20;
+/** Per-file upload cap. Matches the profile-media bucket file_size_limit. */
+export const MAX_FILE_BYTES = 500 * 1024 * 1024; // 500 MB
+
+const TUS_CHUNK_SIZE = 6 * 1024 * 1024; // Supabase requires exactly 6 MB chunks
+const SUPABASE_URL =
+  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_URL) || "";
+
+/**
+ * Resumable upload via TUS protocol. Required for files > ~50 MB because
+ * a single-shot supabase.storage.upload() will time out, has no progress,
+ * and no resume on a flaky network. We use TUS for all uploads now so the
+ * code path is consistent.
+ */
+function tusUpload(
+  file: File,
+  path: string,
+  accessToken: string,
+  onProgress?: (pct: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const upload = new TusUpload(file, {
+      endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
+      retryDelays: [0, 1000, 3000, 5000, 10000, 20000],
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "x-upsert": "false",
+      },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      chunkSize: TUS_CHUNK_SIZE,
+      metadata: {
+        bucketName: "profile-media",
+        objectName: path,
+        contentType: file.type || "application/octet-stream",
+        cacheControl: "3600",
+      },
+      onError: (err) => reject(err),
+      onProgress: (uploaded, total) => {
+        if (onProgress && total > 0) onProgress((uploaded / total) * 100);
+      },
+      onSuccess: () => resolve(),
+    });
+    upload.start();
+  });
+}
 
 export type ProfileMedia = {
   id: string;
@@ -42,11 +88,21 @@ export function useProfileMedia(ownerId: string | null | undefined) {
 export function useUploadMedia() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ file, caption }: { file: File; caption?: string }) => {
+    mutationFn: async (opts: {
+      file: File;
+      caption?: string;
+      onProgress?: (pct: number) => void;
+    }) => {
+      const { file, caption, onProgress } = opts;
       const supa = getSupabaseBrowser();
       if (!supa) throw new Error("Not configured");
       const { data: { session } } = await supa.auth.getSession();
       if (!session) throw new Error("Not signed in");
+
+      if (file.size > MAX_FILE_BYTES) {
+        const mb = (file.size / (1024 * 1024)).toFixed(1);
+        throw new Error(`That file is ${mb} MB — the limit is 500 MB.`);
+      }
 
       const userId = session.user.id;
       const kind: "image" | "video" = file.type.startsWith("video/") ? "video" : "image";
@@ -56,10 +112,8 @@ export function useUploadMedia() {
       // Unique path so re-uploads with the same name don't collide
       const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${safeExt}`;
 
-      const { error: uploadError } = await supa.storage
-        .from("profile-media")
-        .upload(path, file, { contentType: file.type, upsert: false });
-      if (uploadError) throw uploadError;
+      // Resumable upload — handles large files, retries, progress
+      await tusUpload(file, path, session.access_token, onProgress);
 
       const { data: pub } = supa.storage.from("profile-media").getPublicUrl(path);
       const publicUrl = pub.publicUrl;
