@@ -9,6 +9,18 @@ import {
   type ProfileMedia,
 } from "@/lib/hooks/useProfileMedia";
 
+/**
+ * Source of truth for rendering: trust the DB `kind` first, but if the URL
+ * extension says video, treat it as video. This catches items uploaded
+ * before the inferMediaKind fix where file.type was empty and we stored
+ * 'image' incorrectly.
+ */
+function resolveKind(item: ProfileMedia): "image" | "video" {
+  if (item.kind === "video") return "video";
+  if (/\.(mp4|m4v|mov|webm|mkv|avi|ogv|ogg)(\?|$)/i.test(item.url)) return "video";
+  return "image";
+}
+
 export function MediaGallery({
   items,
   ownerId,
@@ -59,7 +71,7 @@ export function MediaGallery({
               className="block h-full w-full"
               aria-label={m.caption || "Open media"}
             >
-              {m.kind === "image" ? (
+              {resolveKind(m) === "image" ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={m.url} alt={m.caption ?? ""} className="h-full w-full object-cover" loading="lazy" />
               ) : (
@@ -129,7 +141,7 @@ export function MediaGallery({
         {openIdx !== null && (
           <div>
             <div className="bg-ink rounded-md overflow-hidden flex items-center justify-center max-h-[70dvh]">
-              {localItems[openIdx].kind === "image" ? (
+              {resolveKind(localItems[openIdx]) === "image" ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={localItems[openIdx].url}
@@ -140,8 +152,18 @@ export function MediaGallery({
                 <video
                   src={localItems[openIdx].url}
                   controls
+                  playsInline
+                  preload="metadata"
                   className="max-h-[70dvh] max-w-full"
-                />
+                >
+                  {/* Fallback if browser can't decode the codec */}
+                  <p className="text-bone p-6 text-center">
+                    Your browser can't play this video.{" "}
+                    <a href={localItems[openIdx].url} target="_blank" rel="noopener noreferrer" className="underline">
+                      Download it instead
+                    </a>.
+                  </p>
+                </video>
               )}
             </div>
             {localItems[openIdx].caption && (

@@ -11,6 +11,42 @@ const TUS_CHUNK_SIZE = 6 * 1024 * 1024; // Supabase requires exactly 6 MB chunks
 const SUPABASE_URL =
   (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_URL) || "";
 
+/** Robust kind detection — file.type is empty for some files, so fall back
+ *  to the extension. */
+export function inferMediaKind(file: { type: string; name: string }): "image" | "video" {
+  if (file.type?.startsWith("video/")) return "video";
+  if (file.type?.startsWith("image/")) return "image";
+  const ext = (file.name.split(".").pop() ?? "").toLowerCase();
+  if (["mp4", "mov", "webm", "mkv", "m4v", "avi", "ogg", "ogv"].includes(ext)) return "video";
+  if (["jpg", "jpeg", "png", "webp", "gif", "heic", "heif", "bmp"].includes(ext)) return "image";
+  return "image";
+}
+
+/** Pair to inferMediaKind: ensure a proper content-type for Supabase Storage
+ *  even when the browser handed us "" or "application/octet-stream". */
+export function inferContentType(file: { type: string; name: string }): string {
+  if (file.type && file.type !== "application/octet-stream") return file.type;
+  const ext = (file.name.split(".").pop() ?? "").toLowerCase();
+  const map: Record<string, string> = {
+    mp4: "video/mp4",
+    m4v: "video/mp4",
+    mov: "video/quicktime",
+    webm: "video/webm",
+    mkv: "video/x-matroska",
+    ogv: "video/ogg",
+    ogg: "video/ogg",
+    avi: "video/x-msvideo",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    heic: "image/heic",
+    heif: "image/heif",
+  };
+  return map[ext] || "application/octet-stream";
+}
+
 /**
  * Resumable upload via TUS protocol. Required for files > ~50 MB because
  * a single-shot supabase.storage.upload() will time out, has no progress,
@@ -37,7 +73,7 @@ function tusUpload(
       metadata: {
         bucketName: "profile-media",
         objectName: path,
-        contentType: file.type || "application/octet-stream",
+        contentType: inferContentType(file),
         cacheControl: "3600",
       },
       onError: (err) => reject(err),
@@ -105,7 +141,7 @@ export function useUploadMedia() {
       }
 
       const userId = session.user.id;
-      const kind: "image" | "video" = file.type.startsWith("video/") ? "video" : "image";
+      const kind = inferMediaKind(file);
       const ext = (file.name.split(".").pop() || (kind === "video" ? "mp4" : "jpg"))
         .toLowerCase().replace(/[^a-z0-9]/g, "");
       const safeExt = ext || (kind === "video" ? "mp4" : "jpg");
