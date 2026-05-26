@@ -8,6 +8,17 @@ import {
   useReorderMedia,
   type ProfileMedia,
 } from "@/lib/hooks/useProfileMedia";
+import { InteractionsSection } from "@/components/interactions/InteractionsSection";
+import { useSession } from "@/lib/hooks/useSession";
+import { useProfile } from "@/lib/hooks/useProfile";
+import {
+  useMediaInteractions,
+  useLikeMedia,
+  useUnlikeMedia,
+  useMediaComments,
+  useAddMediaComment,
+  useDeleteMediaComment,
+} from "@/lib/hooks/useMediaInteractions";
 
 /**
  * Source of truth for rendering: trust the DB `kind` first, but if the URL
@@ -169,6 +180,12 @@ export function MediaGallery({
             {localItems[openIdx].caption && (
               <p className="mt-3 text-sm text-ink2">{localItems[openIdx].caption}</p>
             )}
+
+            <MediaInteractionsRow
+              mediaId={localItems[openIdx].id}
+              ownerId={ownerId}
+            />
+
             <div className="mt-3 flex items-center justify-between text-xs text-ink3">
               <span>{openIdx + 1} / {localItems.length}</span>
               <div className="flex gap-2">
@@ -192,5 +209,50 @@ export function MediaGallery({
         )}
       </Modal>
     </div>
+  );
+}
+
+function MediaInteractionsRow({ mediaId, ownerId }: { mediaId: string; ownerId: string }) {
+  const { userId } = useSession();
+  const { data: ownerProfile } = useProfile(ownerId);
+  const { data: interactions } = useMediaInteractions(mediaId);
+  const like = useLikeMedia();
+  const unlike = useUnlikeMedia();
+  const { data: comments = [], isLoading: commentsLoading } = useMediaComments(mediaId);
+  const addComment = useAddMediaComment();
+  const delComment = useDeleteMediaComment();
+
+  const allowLikes    = (ownerProfile as any)?.allow_media_likes    !== false;
+  const allowComments = (ownerProfile as any)?.allow_media_comments !== false;
+
+  const iLiked = interactions?.iLiked ?? false;
+  const likeCount = interactions?.likeCount ?? 0;
+  const commentCount = interactions?.commentCount ?? 0;
+
+  function toggleLike() {
+    if (iLiked) unlike.mutate(mediaId);
+    else like.mutate(mediaId);
+  }
+
+  return (
+    <InteractionsSection
+      iLiked={iLiked}
+      likeCount={likeCount}
+      commentCount={commentCount}
+      onToggleLike={toggleLike}
+      pendingLike={like.isPending || unlike.isPending}
+      comments={comments}
+      isLoadingComments={commentsLoading}
+      onAddComment={async (body) => {
+        await addComment.mutateAsync({ mediaId, body });
+      }}
+      onDeleteComment={async (commentId) => {
+        await delComment.mutateAsync({ commentId, mediaId });
+      }}
+      currentUserId={userId ?? null}
+      variant="modal"
+      allowLikes={allowLikes}
+      allowComments={allowComments}
+    />
   );
 }

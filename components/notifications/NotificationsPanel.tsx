@@ -135,6 +135,14 @@ function describe(n: Notification): string {
       return `commented on your wall post`;
     case "post_like":
       return `liked your wall post`;
+    case "media_comment":
+      return `commented on your photo`;
+    case "media_like":
+      return `liked your photo`;
+    case "prompt_comment":
+      return `commented on your prompt answer`;
+    case "prompt_like":
+      return `liked your prompt answer`;
     default:
       return "did something";
   }
@@ -158,6 +166,11 @@ function linkFor(n: Notification): string | null {
     case "post_like":
       // Wall posts are shown on the owner's profile; route to /profile
       return "/profile?tab=wall";
+    case "media_comment":
+    case "media_like":
+    case "prompt_comment":
+    case "prompt_like":
+      return "/profile?tab=about";
     default:
       return null;
   }

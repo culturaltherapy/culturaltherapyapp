@@ -2,80 +2,76 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useDeletePost, type WallPost } from "@/lib/hooks/useWallPosts";
-import {
-  usePostInteractions,
-  useLikePost,
-  useUnlikePost,
-  usePostComments,
-  useAddComment,
-  useDeleteComment,
-} from "@/lib/hooks/usePostInteractions";
-import { useSession } from "@/lib/hooks/useSession";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { timeAgo } from "@/lib/utils";
 
-const VIS_LABEL: Record<WallPost["visibility"], string> = {
-  public:  "PUBLIC",
-  tribe:   "TRIBE",
-  village: "VILLAGE",
-  private: "PRIVATE",
+export type InteractionsComment = {
+  id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  author?: { id: string; alias: string | null; avatar_url: string | null } | null;
 };
 
-export function PostCard({
-  post,
-  canDelete,
+type Props = {
+  iLiked: boolean;
+  likeCount: number;
+  commentCount: number;
+  onToggleLike: () => void;
+  pendingLike?: boolean;
+  comments: InteractionsComment[];
+  isLoadingComments: boolean;
+  onAddComment: (body: string) => Promise<void>;
+  onDeleteComment: (commentId: string) => Promise<void>;
+  currentUserId: string | null;
+  expandedByDefault?: boolean;
+  variant?: "inline" | "modal";
+  /** Hide the heart button (owner has disabled likes on this surface). */
+  allowLikes?: boolean;
+  /** Hide the 💬 button (owner has disabled comments on this surface). */
+  allowComments?: boolean;
+};
+
+/**
+ * Shared like + comments action row used by media and prompt cards. Mirrors
+ * the structure inside PostCard.tsx but extracted so it can be reused.
+ * `variant` controls padding/border styling for inline (cards) vs modal
+ * (inside the media lightbox).
+ */
+export function InteractionsSection({
+  iLiked,
+  likeCount,
+  commentCount,
+  onToggleLike,
+  pendingLike,
+  comments,
+  isLoadingComments,
+  onAddComment,
+  onDeleteComment,
+  currentUserId,
+  expandedByDefault = false,
+  variant = "inline",
   allowLikes = true,
   allowComments = true,
-}: {
-  post: WallPost;
-  canDelete: boolean;
-  /** Hide the heart when the post-owner has switched likes off on their wall. */
-  allowLikes?: boolean;
-  /** Hide the 💬 button when the post-owner has switched comments off on their wall. */
-  allowComments?: boolean;
-}) {
-  const del = useDeletePost();
-  const [confirming, setConfirming] = React.useState(false);
-  const [showComments, setShowComments] = React.useState(false);
+}: Props) {
+  const [showComments, setShowComments] = React.useState(expandedByDefault);
 
-  const { data: interactions } = usePostInteractions(post.id);
-  const like = useLikePost();
-  const unlike = useUnlikePost();
+  // If both buttons are hidden, the action row collapses entirely
+  const hasActions = allowLikes || allowComments;
+  // Always show non-zero counts (so owners can see history) but disable buttons
+  const showCounts = likeCount > 0 || commentCount > 0;
 
-  const likeCount = interactions?.likeCount ?? 0;
-  const commentCount = interactions?.commentCount ?? 0;
-  const iLiked = interactions?.iLiked ?? false;
-
-  async function handleDelete() {
-    if (!confirming) { setConfirming(true); return; }
-    try {
-      await del.mutateAsync(post.id);
-    } catch (_) {} finally {
-      setConfirming(false);
-    }
-  }
-
-  function toggleLike() {
-    if (iLiked) unlike.mutate(post.id);
-    else like.mutate(post.id);
-  }
+  if (!hasActions && !showCounts) return null;
 
   return (
-    <li className="surface p-4">
-      <div className="flex items-baseline justify-between text-xs text-ink3 gap-3">
-        <span>{timeAgo(post.created_at)}{post.edited_at && " · edited"}</span>
-        <span className="font-mono uppercase">{VIS_LABEL[post.visibility]}</span>
-      </div>
-      <p className="mt-2 text-[15px] leading-relaxed whitespace-pre-wrap">{post.body}</p>
-
+    <div className={variant === "modal" ? "mt-4 pt-3 border-t border-line" : "mt-3 pt-3 border-t border-line"}>
       {/* Action row */}
-      <div className="mt-3 pt-3 border-t border-line flex items-center gap-4 text-sm">
+      <div className="flex items-center gap-4 text-sm">
         {allowLikes ? (
           <button
-            onClick={toggleLike}
-            disabled={like.isPending || unlike.isPending}
+            onClick={onToggleLike}
+            disabled={pendingLike}
             className={`inline-flex items-center gap-1.5 transition ${
               iLiked ? "text-terracotta" : "text-ink3 hover:text-ink"
             }`}
@@ -85,7 +81,7 @@ export function PostCard({
             <span className="text-xs font-mono">{likeCount}</span>
           </button>
         ) : likeCount > 0 ? (
-          <span className="inline-flex items-center gap-1.5 text-ink3">
+          <span className="inline-flex items-center gap-1.5 text-ink3" aria-label="Likes">
             <span aria-hidden>♥</span>
             <span className="text-xs font-mono">{likeCount}</span>
           </span>
@@ -107,50 +103,59 @@ export function PostCard({
           </span>
         ) : null}
 
-        {!allowLikes && !allowComments && likeCount === 0 && commentCount === 0 && (
+        {!allowLikes && !allowComments && (
           <span className="text-xs text-ink3 italic">Reactions are off</span>
-        )}
-
-        {canDelete && (
-          <button
-            onClick={handleDelete}
-            disabled={del.isPending}
-            className={`ml-auto text-xs ${confirming ? "text-crisis font-medium" : "text-ink3"} hover:text-crisis`}
-          >
-            {del.isPending ? "Deleting…" : confirming ? "Tap again to confirm delete" : "Delete"}
-          </button>
         )}
       </div>
 
-      {/* Comments section — only if comments are allowed AND user expanded */}
-      {showComments && allowComments && <PostComments postId={post.id} />}
-    </li>
+      {/* Comments thread */}
+      {showComments && allowComments && (
+        <CommentsThread
+          comments={comments}
+          isLoading={isLoadingComments}
+          onAddComment={onAddComment}
+          onDeleteComment={onDeleteComment}
+          currentUserId={currentUserId}
+        />
+      )}
+    </div>
   );
 }
 
-function PostComments({ postId }: { postId: string }) {
-  const { userId } = useSession();
-  const { data: comments = [], isLoading } = usePostComments(postId);
-  const add = useAddComment();
-  const del = useDeleteComment();
+function CommentsThread({
+  comments,
+  isLoading,
+  onAddComment,
+  onDeleteComment,
+  currentUserId,
+}: {
+  comments: InteractionsComment[];
+  isLoading: boolean;
+  onAddComment: (body: string) => Promise<void>;
+  onDeleteComment: (commentId: string) => Promise<void>;
+  currentUserId: string | null;
+}) {
   const [draft, setDraft] = React.useState("");
+  const [posting, setPosting] = React.useState(false);
   const [confirming, setConfirming] = React.useState<string | null>(null);
 
   async function submit() {
     if (!draft.trim()) return;
+    setPosting(true);
     try {
-      await add.mutateAsync({ postId, body: draft.trim() });
+      await onAddComment(draft.trim());
       setDraft("");
     } catch (e: any) {
-      // Surface as alert for simplicity
       alert(e?.message ?? "Couldn't post comment.");
+    } finally {
+      setPosting(false);
     }
   }
 
   async function remove(id: string) {
     if (confirming !== id) { setConfirming(id); return; }
     try {
-      await del.mutateAsync({ commentId: id, postId });
+      await onDeleteComment(id);
     } catch (_) {} finally {
       setConfirming(null);
     }
@@ -179,7 +184,7 @@ function PostComments({ postId }: { postId: string }) {
                     {c.author?.alias ?? "Member"}
                   </Link>
                   <span>{timeAgo(c.created_at)}</span>
-                  {c.author_id === userId && (
+                  {c.author_id === currentUserId && (
                     <button
                       onClick={() => remove(c.id)}
                       className={`ml-auto ${confirming === c.id ? "text-crisis font-medium" : "text-ink3"} hover:text-crisis`}
@@ -195,7 +200,7 @@ function PostComments({ postId }: { postId: string }) {
         </ul>
       )}
 
-      {userId && (
+      {currentUserId && (
         <div className="mt-3 flex items-end gap-2">
           <textarea
             value={draft}
@@ -211,8 +216,8 @@ function PostComments({ postId }: { postId: string }) {
               }
             }}
           />
-          <Button size="sm" onClick={submit} disabled={add.isPending || !draft.trim()}>
-            {add.isPending ? "…" : "Post"}
+          <Button size="sm" onClick={submit} disabled={posting || !draft.trim()}>
+            {posting ? "…" : "Post"}
           </Button>
         </div>
       )}

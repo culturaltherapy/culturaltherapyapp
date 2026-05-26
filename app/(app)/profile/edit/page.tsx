@@ -39,7 +39,8 @@ type SectionKey =
   | "diagnosis"
   | "prompts"
   | "social"
-  | "contact";
+  | "contact"
+  | "reactions";
 
 // DESCENT_OPTIONS removed — RootsEditor now uses TagPicker with the
 // comprehensive HERITAGE_OPTIONS list from lib/mock-data.ts.
@@ -209,6 +210,28 @@ export default function EditProfile() {
           onToggle={() => toggle("contact")}
         >
           <ContactEditor userId={userId} profile={profile} onSaved={reload} />
+        </SectionCard>
+
+        <SectionCard
+          title="Likes & comments"
+          summary={(() => {
+            const flags = [
+              (profile as any).allow_wall_likes !== false,
+              (profile as any).allow_wall_comments !== false,
+              (profile as any).allow_media_likes !== false,
+              (profile as any).allow_media_comments !== false,
+              (profile as any).allow_prompt_likes !== false,
+              (profile as any).allow_prompt_comments !== false,
+            ];
+            const on = flags.filter(Boolean).length;
+            if (on === 6) return "All reactions on";
+            if (on === 0) return "All reactions off";
+            return `${on} of 6 enabled`;
+          })()}
+          open={openSection === "reactions"}
+          onToggle={() => toggle("reactions")}
+        >
+          <ReactionsEditor userId={userId} profile={profile} onSaved={reload} />
         </SectionCard>
       </ul>
     </div>
@@ -887,6 +910,73 @@ function PromptsEditor({ userId, existing, onSaved }: {
         </Button>
       </div>
     </div>
+  );
+}
+
+function ReactionsEditor({ userId, profile, onSaved }: { userId: string; profile: any; onSaved: () => void }) {
+  const [wallLikes, setWallLikes] = React.useState(profile.allow_wall_likes !== false);
+  const [wallComments, setWallComments] = React.useState(profile.allow_wall_comments !== false);
+  const [mediaLikes, setMediaLikes] = React.useState(profile.allow_media_likes !== false);
+  const [mediaComments, setMediaComments] = React.useState(profile.allow_media_comments !== false);
+  const [promptLikes, setPromptLikes] = React.useState(profile.allow_prompt_likes !== false);
+  const [promptComments, setPromptComments] = React.useState(profile.allow_prompt_comments !== false);
+
+  const rows: { key: string; label: string; like: boolean; setLike: (v: boolean) => void; comment: boolean; setComment: (v: boolean) => void }[] = [
+    { key: "wall",   label: "Wall posts",       like: wallLikes,   setLike: setWallLikes,   comment: wallComments,   setComment: setWallComments   },
+    { key: "media",  label: "Photos & videos",  like: mediaLikes,  setLike: setMediaLikes,  comment: mediaComments,  setComment: setMediaComments  },
+    { key: "prompt", label: "Prompts",          like: promptLikes, setLike: setPromptLikes, comment: promptComments, setComment: setPromptComments },
+  ];
+
+  return (
+    <SaveForm
+      userId={userId}
+      patch={{
+        allow_wall_likes:      wallLikes,
+        allow_wall_comments:   wallComments,
+        allow_media_likes:     mediaLikes,
+        allow_media_comments:  mediaComments,
+        allow_prompt_likes:    promptLikes,
+        allow_prompt_comments: promptComments,
+      }}
+      onSaved={onSaved}
+    >
+      <p className="text-sm text-ink2">
+        Choose which parts of your profile other members can react to. Turning a
+        toggle off hides the heart or 💬 button on that surface for everyone else
+        — your existing likes and comments stay visible to you.
+      </p>
+
+      <div className="overflow-hidden rounded-md border border-line">
+        <div className="grid grid-cols-[1fr_auto_auto] gap-x-6 px-4 py-2 bg-bone text-xs uppercase tracking-wider text-ink3 font-mono">
+          <span>Surface</span>
+          <span>Likes</span>
+          <span>Comments</span>
+        </div>
+        {rows.map((r) => (
+          <div key={r.key} className="grid grid-cols-[1fr_auto_auto] gap-x-6 px-4 py-3 border-t border-line items-center text-sm">
+            <span className="text-ink2">{r.label}</span>
+            <label className="inline-flex items-center gap-2 justify-self-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={r.like}
+                onChange={(e) => r.setLike(e.target.checked)}
+                className="accent-terracotta"
+                aria-label={`Allow likes on ${r.label}`}
+              />
+            </label>
+            <label className="inline-flex items-center gap-2 justify-self-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={r.comment}
+                onChange={(e) => r.setComment(e.target.checked)}
+                className="accent-terracotta"
+                aria-label={`Allow comments on ${r.label}`}
+              />
+            </label>
+          </div>
+        ))}
+      </div>
+    </SaveForm>
   );
 }
 

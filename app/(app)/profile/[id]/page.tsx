@@ -11,6 +11,7 @@ import { useSharesTribeWith } from "@/lib/hooks/useTribes";
 import { PostCard } from "@/components/posts/PostCard";
 import { MediaGallery } from "@/components/media/MediaGallery";
 import { ProfileTabs, useTabParam } from "@/components/profile/ProfileTabs";
+import { PromptCard } from "@/components/profile/PromptCard";
 import { useSession } from "@/lib/hooks/useSession";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -181,7 +182,15 @@ export default function ViewProfile() {
       <section className="mt-6 grid lg:grid-cols-[1fr_320px] gap-6">
         <div>
           {tab === "about" && (
-            <ViewAboutTab bio={bio} media={media} ownerId={params.id} prompts={prompts} alias={alias} />
+            <ViewAboutTab
+              bio={bio}
+              media={media}
+              ownerId={params.id}
+              prompts={prompts}
+              alias={alias}
+              allowPromptLikes={(profile as any)?.allow_prompt_likes !== false}
+              allowPromptComments={(profile as any)?.allow_prompt_comments !== false}
+            />
           )}
 
           {tab === "wall" && (
@@ -194,7 +203,13 @@ export default function ViewProfile() {
               ) : (
                 <ul className="space-y-3">
                   {posts.map((p) => (
-                    <PostCard key={p.id} post={p} canDelete={false} />
+                    <PostCard
+                      key={p.id}
+                      post={p}
+                      canDelete={false}
+                      allowLikes={(profile as any)?.allow_wall_likes !== false}
+                      allowComments={(profile as any)?.allow_wall_comments !== false}
+                    />
                   ))}
                 </ul>
               )}
@@ -271,12 +286,14 @@ export default function ViewProfile() {
   );
 }
 
-function ViewAboutTab({ bio, media, ownerId, prompts, alias }: {
+function ViewAboutTab({ bio, media, ownerId, prompts, alias, allowPromptLikes, allowPromptComments }: {
   bio: string | null;
   media: any[];
   ownerId: string;
   prompts: any[];
   alias: string;
+  allowPromptLikes: boolean;
+  allowPromptComments: boolean;
 }) {
   return (
     <div className="space-y-6">
@@ -303,10 +320,12 @@ function ViewAboutTab({ bio, media, ownerId, prompts, alias }: {
           <h3 className="font-display text-xl mb-3">Prompts</h3>
           <ul className="grid sm:grid-cols-2 gap-3">
             {prompts.map((p: any) => (
-              <li key={p.id} className="surface p-5">
-                <p className="eyebrow">{p.question}</p>
-                <p className="font-display text-lg mt-1 italic leading-snug">"{p.answer}"</p>
-              </li>
+              <PromptCard
+                key={p.id}
+                prompt={p}
+                allowLikes={allowPromptLikes}
+                allowComments={allowPromptComments}
+              />
             ))}
           </ul>
         </div>

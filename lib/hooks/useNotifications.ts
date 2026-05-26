@@ -11,7 +11,11 @@ export type NotificationKind =
   | "connection_accepted"
   | "direct_message"
   | "post_comment"
-  | "post_like";
+  | "post_like"
+  | "media_comment"
+  | "media_like"
+  | "prompt_comment"
+  | "prompt_like";
 
 export type Notification = {
   id: string;

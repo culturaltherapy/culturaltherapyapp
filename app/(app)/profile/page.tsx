@@ -11,6 +11,7 @@ import { PostComposer } from "@/components/posts/PostComposer";
 import { PostCard } from "@/components/posts/PostCard";
 import { MediaGallery } from "@/components/media/MediaGallery";
 import { ProfileTabs, useTabParam } from "@/components/profile/ProfileTabs";
+import { PromptCard } from "@/components/profile/PromptCard";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
@@ -265,10 +266,7 @@ function AboutTab({
         ) : prompts.length > 0 ? (
           <ul className="grid sm:grid-cols-2 gap-3">
             {prompts.map((p: any) => (
-              <li key={p.id} className="surface p-5">
-                <p className="eyebrow">{p.question}</p>
-                <p className="font-display text-lg mt-1 italic leading-snug">"{p.answer}"</p>
-              </li>
+              <PromptCard key={p.id} prompt={p} />
             ))}
           </ul>
         ) : canEdit ? (
