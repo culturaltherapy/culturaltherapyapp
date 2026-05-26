@@ -157,7 +157,7 @@ create policy "prompt_likes_insert"
       select 1
         from public.profile_prompts pr
         join public.profiles p on p.id = pr.user_id
-       where pr.id = prompt_id
+       where pr.id = prompt_likes.prompt_id
          and p.allow_prompt_likes = true
     )
   );
@@ -204,7 +204,7 @@ create policy "prompt_comments_insert"
       select 1
         from public.profile_prompts pr
         join public.profiles p on p.id = pr.user_id
-       where pr.id = prompt_id
+       where pr.id = prompt_comments.prompt_id
          and p.allow_prompt_comments = true
     )
   );
