@@ -143,8 +143,9 @@ export function usePostComments(postId: string | null | undefined, enabled = tru
         .order("created_at", { ascending: true });
 
       if (error) {
-        console.error("usePostComments error:", error.message);
-        return [];
+        // Surface the real error to React Query so the UI can show it
+        console.error("usePostComments error:", error);
+        throw new Error(error.message ?? "Couldn't load comments.");
       }
       if (!comments || comments.length === 0) return [];
 

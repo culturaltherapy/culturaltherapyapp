@@ -38,7 +38,6 @@ export function PostCard({
 }) {
   const del = useDeletePost();
   const [confirming, setConfirming] = React.useState(false);
-  const [showComments, setShowComments] = React.useState(false);
 
   const { data: interactions } = usePostInteractions(post.id);
   const like = useLikePost();
@@ -47,6 +46,17 @@ export function PostCard({
   const likeCount = interactions?.likeCount ?? 0;
   const commentCount = interactions?.commentCount ?? 0;
   const iLiked = interactions?.iLiked ?? false;
+
+  // Auto-expand the comments thread whenever there's something to show, so
+  // viewers don't have to click 💬 to discover them. Users can still toggle.
+  const [showComments, setShowComments] = React.useState(false);
+  const autoExpanded = React.useRef(false);
+  React.useEffect(() => {
+    if (!autoExpanded.current && commentCount > 0) {
+      autoExpanded.current = true;
+      setShowComments(true);
+    }
+  }, [commentCount]);
 
   async function handleDelete() {
     if (!confirming) { setConfirming(true); return; }
@@ -130,7 +140,7 @@ export function PostCard({
 
 function PostComments({ postId }: { postId: string }) {
   const { userId } = useSession();
-  const { data: comments = [], isLoading } = usePostComments(postId);
+  const { data: comments = [], isLoading, error } = usePostComments(postId);
   const add = useAddComment();
   const del = useDeleteComment();
   const [draft, setDraft] = React.useState("");
@@ -160,6 +170,10 @@ function PostComments({ postId }: { postId: string }) {
     <div className="mt-3 pt-3 border-t border-line">
       {isLoading ? (
         <p className="text-xs text-ink3">Loading comments…</p>
+      ) : error ? (
+        <p className="text-xs text-crisis">
+          Couldn't load comments: {(error as Error).message}
+        </p>
       ) : comments.length === 0 ? (
         <p className="text-xs text-ink3">No comments yet — be the first.</p>
       ) : (
