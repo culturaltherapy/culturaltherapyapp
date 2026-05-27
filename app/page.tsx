@@ -83,7 +83,7 @@ export default function Landing() {
             icon={<EyeOfHorus size={48} />}
             kicker="Discussions"
             title="Spaces that are moderated by people who've been there."
-            body="Forums and live rooms by topic. Crisis escalation is one tap."
+            body="Forums and live rooms by topic. Crisis escalation is one tap away."
           />
         </div>
       </section>
