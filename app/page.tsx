@@ -71,7 +71,7 @@ export default function Landing() {
             icon={<Sankofa size={48} />}
             kicker="Lived Experience Network"
             title="People who get it."
-            body="Hinge-style discovery, but for cultural and lived-experience match. Not friends. Tribe."
+            body="Discovery built around cultural and lived-experience match. Not friends. Tribe."
           />
           <Pillar
             icon={<Dwennimmen size={48} />}
@@ -82,7 +82,7 @@ export default function Landing() {
           <Pillar
             icon={<EyeOfHorus size={48} />}
             kicker="Discussions"
-            title="Spaces that are moderated by people who've been here."
+            title="Spaces that are moderated by people who've been there."
             body="Forums and live rooms by topic. Crisis escalation is one tap."
           />
         </div>
