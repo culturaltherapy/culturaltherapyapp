@@ -16,6 +16,7 @@ import { useSession } from "@/lib/hooks/useSession";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
+import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 import { EyeOfHorus } from "@/components/motifs/Motifs";
 import { Icon } from "@/components/ui/Icon";
 import { InviteToTribeModal } from "@/components/tribes/InviteToTribeModal";
@@ -35,6 +36,7 @@ export default function ViewProfile() {
   const { data: prompts = [] } = useUserPrompts(params.id);
   const { data: posts = [] } = useWallPosts(params.id);
   const { data: media = [] } = useProfileMedia(params.id);
+  const profileOnline = useOnlineStatus((profile as any)?.last_seen_at);
   const [inviteOpen, setInviteOpen] = React.useState(false);
   const isOwnProfile = !!currentUserId && currentUserId === params.id;
   const { data: connection } = useConnectionWith(isOwnProfile ? null : params.id);
@@ -116,7 +118,13 @@ export default function ViewProfile() {
           <EyeOfHorus size={220} />
         </div>
         <div className="relative flex flex-col sm:flex-row gap-5 sm:items-end">
-          <Avatar name={alias} color={avatarColor} size={96} src={avatarUrl} />
+          <Avatar
+            name={alias}
+            color={avatarColor}
+            size={96}
+            src={avatarUrl}
+            online={profileOnline}
+          />
           <div className="flex-1">
             <h1 className="font-display text-4xl mt-1 leading-tight">{alias}</h1>
             {locationLine && <p className="text-ink2 mt-1">{locationLine}</p>}

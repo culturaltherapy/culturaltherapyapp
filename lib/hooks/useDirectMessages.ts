@@ -9,7 +9,7 @@ export type DmThread = {
   user_b: string;
   last_message_at: string | null;
   created_at: string;
-  other?: { id: string; alias: string | null; avatar_url: string | null } | null;
+  other?: { id: string; alias: string | null; avatar_url: string | null; last_seen_at: string | null } | null;
   unread_count?: number;
   last_message?: { body: string; sender_id: string; created_at: string } | null;
 };
@@ -53,7 +53,7 @@ export function useMyDmThreads() {
       const uniqueOtherIds = Array.from(new Set(otherIds));
       const { data: profiles } = await (supa as any)
         .from("profiles")
-        .select("id, alias, avatar_url")
+        .select("id, alias, avatar_url, last_seen_at")
         .in("id", uniqueOtherIds);
       const profMap = new Map<string, any>((profiles ?? []).map((p: any) => [p.id, p]));
 

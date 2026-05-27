@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useProfiles } from "@/lib/hooks/useProfiles";
 import { Avatar } from "@/components/ui/Avatar";
+import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 import { Chip } from "@/components/ui/Chip";
 import { Sankofa } from "@/components/motifs/Motifs";
 import { Icon } from "@/components/ui/Icon";
@@ -82,49 +83,13 @@ export default function NetworkPage() {
 
       {!isLoading && view === "cards" && (
         <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {list.map((p) => (
-            <li key={p.id}>
-              <Link href={`/profile/${p.id}`} className="block surface p-4 hover:shadow-soft transition">
-                <header className="flex items-start gap-3">
-                  <Avatar name={p.alias} color={p.avatarColor} size={48} src={(p as any).src} />
-                  <div className="min-w-0">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <h3 className="font-display text-xl truncate">{p.alias}</h3>
-                      <span className="text-[11px] font-mono text-terracotta whitespace-nowrap">{p.matchPct}% match</span>
-                    </div>
-                    <p className="text-xs text-ink3">{p.city}, {p.country}</p>
-                  </div>
-                </header>
-                {p.prompt?.answer && (
-                  <div className="mt-3">
-                    <p className="eyebrow">{p.prompt.question}</p>
-                    <p className="mt-1 text-[15px] text-ink2 leading-snug line-clamp-3">"{p.prompt.answer}"</p>
-                  </div>
-                )}
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {p.experienceTags.slice(0, 3).map((tag: string) => <Chip key={tag}>{tag}</Chip>)}
-                </div>
-              </Link>
-            </li>
-          ))}
+          {list.map((p) => <NetworkCard key={p.id} p={p} />)}
         </ul>
       )}
 
       {!isLoading && view === "list" && (
         <ul className="mt-5 surface divide-y divide-line">
-          {list.map((p) => (
-            <li key={p.id} className="px-4 py-3 flex items-center gap-3">
-              <Avatar name={p.alias} color={p.avatarColor} size={40} src={(p as any).src} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between gap-2">
-                  <strong>{p.alias}</strong>
-                  <span className="text-xs text-ink3">{p.city}, {p.country}</span>
-                </div>
-                {p.prompt?.answer && <p className="text-sm text-ink2 line-clamp-1">"{p.prompt.answer}"</p>}
-              </div>
-              <span className="text-[11px] font-mono text-terracotta">{p.matchPct}%</span>
-            </li>
-          ))}
+          {list.map((p) => <NetworkRow key={p.id} p={p} />)}
         </ul>
       )}
 
@@ -196,5 +161,51 @@ function ViewPicker({ view, setView }: { view: View; setView: (v: View) => void 
         </button>
       ))}
     </div>
+  );
+}
+
+function NetworkCard({ p }: { p: any }) {
+  const online = useOnlineStatus(p.lastSeenAt);
+  return (
+    <li>
+      <Link href={`/profile/${p.id}`} className="block surface p-4 hover:shadow-soft transition">
+        <header className="flex items-start gap-3">
+          <Avatar name={p.alias} color={p.avatarColor} size={48} src={p.src} online={online} />
+          <div className="min-w-0">
+            <div className="flex items-baseline justify-between gap-2">
+              <h3 className="font-display text-xl truncate">{p.alias}</h3>
+              <span className="text-[11px] font-mono text-terracotta whitespace-nowrap">{p.matchPct}% match</span>
+            </div>
+            <p className="text-xs text-ink3">{p.city}, {p.country}</p>
+          </div>
+        </header>
+        {p.prompt?.answer && (
+          <div className="mt-3">
+            <p className="eyebrow">{p.prompt.question}</p>
+            <p className="mt-1 text-[15px] text-ink2 leading-snug line-clamp-3">"{p.prompt.answer}"</p>
+          </div>
+        )}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {p.experienceTags.slice(0, 3).map((tag: string) => <Chip key={tag}>{tag}</Chip>)}
+        </div>
+      </Link>
+    </li>
+  );
+}
+
+function NetworkRow({ p }: { p: any }) {
+  const online = useOnlineStatus(p.lastSeenAt);
+  return (
+    <li className="px-4 py-3 flex items-center gap-3">
+      <Avatar name={p.alias} color={p.avatarColor} size={40} src={p.src} online={online} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline justify-between gap-2">
+          <strong>{p.alias}</strong>
+          <span className="text-xs text-ink3">{p.city}, {p.country}</span>
+        </div>
+        {p.prompt?.answer && <p className="text-sm text-ink2 line-clamp-1">"{p.prompt.answer}"</p>}
+      </div>
+      <span className="text-[11px] font-mono text-terracotta">{p.matchPct}%</span>
+    </li>
   );
 }

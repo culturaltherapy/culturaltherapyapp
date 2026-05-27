@@ -18,7 +18,7 @@ export function useProfiles(q?: string) {
 
       let query = supa
         .from("profiles")
-        .select("id, alias, avatar_url, city, country, descent, experience_tags, id_verified")
+        .select("id, alias, avatar_url, city, country, descent, experience_tags, id_verified, last_seen_at")
         // Only return profiles that have completed onboarding AND have an alias
         // AND aren't deactivated. Partial / abandoned onboardings stay hidden
         // from the network until the user finishes.
@@ -55,7 +55,8 @@ export function useProfiles(q?: string) {
         experienceTags: p.experience_tags ?? [],
         prompt: { question: "What anchors you?", answer: "" },
         idVerified: p.id_verified ?? false,
-        src: p.avatar_url
+        src: p.avatar_url,
+        lastSeenAt: p.last_seen_at ?? null,
       }));
     },
     staleTime: 30_000

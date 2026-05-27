@@ -6,6 +6,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Ubuntu } from "@/components/motifs/Motifs";
 import { timeAgo } from "@/lib/utils";
+import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 
 export default function ConnectionsPage() {
   const { data: connections = [], isLoading } = useMyConnections();
@@ -93,6 +94,7 @@ export default function ConnectionsPage() {
 
 function ConnectionCard({ c, muted }: { c: any; muted?: boolean }) {
   const other = c.other;
+  const online = useOnlineStatus(other?.last_seen_at);
   return (
     <li className={`surface p-4 ${muted ? "opacity-80" : ""}`}>
       <Link href={other?.id ? `/profile/${other.id}` : "#"} className="flex items-center gap-3">
@@ -100,6 +102,7 @@ function ConnectionCard({ c, muted }: { c: any; muted?: boolean }) {
           name={other?.alias ?? "Member"}
           src={other?.avatar_url}
           size={48}
+          online={online}
         />
         <div className="flex-1 min-w-0">
           <strong className="block truncate">{other?.alias ?? "Member"}</strong>

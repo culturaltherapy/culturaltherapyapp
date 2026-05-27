@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Funtunfunefu } from "@/components/motifs/Motifs";
 import { timeAgo } from "@/lib/utils";
+import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 
 export default function MessagesPage() {
   const { data: threads = [], isLoading } = useMyDmThreads();
@@ -40,7 +41,7 @@ export default function MessagesPage() {
         <p className="text-ink2 mt-2 max-w-prose">
           Direct messages are only available between accepted connections. Don't
           share phone numbers, addresses, or financial details — keep it inside
-          the app where mods can help.
+          the app where moderators can help.
         </p>
       </header>
 
@@ -64,34 +65,7 @@ export default function MessagesPage() {
           ) : (
             <ul className="surface divide-y divide-line">
               {threads.map((t) => (
-                <li key={t.id}>
-                  <Link
-                    href={`/messages/${t.id}`}
-                    className="block px-4 py-3 hover:bg-ink/[.02] transition flex items-center gap-3"
-                  >
-                    <Avatar
-                      name={t.other?.alias ?? "Member"}
-                      src={t.other?.avatar_url}
-                      size={44}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <strong className="truncate">{t.other?.alias ?? "Member"}</strong>
-                        <span className="text-xs text-ink3 whitespace-nowrap">
-                          {t.last_message_at ? timeAgo(t.last_message_at) : "—"}
-                        </span>
-                      </div>
-                      <p className="text-sm text-ink3 truncate">
-                        {t.last_message?.body ?? <em className="text-ink3">no messages yet</em>}
-                      </p>
-                    </div>
-                    {(t.unread_count ?? 0) > 0 && (
-                      <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-crisis text-bone text-[11px] font-mono font-bold flex items-center justify-center">
-                        {t.unread_count}
-                      </span>
-                    )}
-                  </Link>
-                </li>
+                <ThreadRow key={t.id} t={t} />
               ))}
             </ul>
           )}
@@ -110,28 +84,84 @@ export default function MessagesPage() {
           ) : (
             <ul className="surface divide-y divide-line">
               {fresh.map((c) => (
-                <li key={c.id}>
-                  <button
-                    onClick={() => c.other?.id && startWith(c.other.id)}
-                    disabled={orCreate.isPending}
-                    className="w-full text-left px-3 py-2.5 hover:bg-ink/[.02] flex items-center gap-3"
-                  >
-                    <Avatar
-                      name={c.other?.alias ?? "Member"}
-                      src={c.other?.avatar_url}
-                      size={36}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <strong className="block truncate text-sm">{c.other?.alias ?? "Member"}</strong>
-                      <span className="text-xs text-ink3">Connected · tap to message</span>
-                    </div>
-                  </button>
-                </li>
+                <FreshConnectionRow
+                  key={c.id}
+                  c={c}
+                  onPick={startWith}
+                  pending={orCreate.isPending}
+                />
               ))}
             </ul>
           )}
         </aside>
       </div>
     </div>
+  );
+}
+
+function ThreadRow({ t }: { t: any }) {
+  const online = useOnlineStatus(t.other?.last_seen_at);
+  return (
+    <li>
+      <Link
+        href={`/messages/${t.id}`}
+        className="block px-4 py-3 hover:bg-ink/[.02] transition flex items-center gap-3"
+      >
+        <Avatar
+          name={t.other?.alias ?? "Member"}
+          src={t.other?.avatar_url}
+          size={44}
+          online={online}
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline justify-between gap-3">
+            <strong className="truncate">{t.other?.alias ?? "Member"}</strong>
+            <span className="text-xs text-ink3 whitespace-nowrap">
+              {t.last_message_at ? timeAgo(t.last_message_at) : "—"}
+            </span>
+          </div>
+          <p className="text-sm text-ink3 truncate">
+            {t.last_message?.body ?? <em className="text-ink3">no messages yet</em>}
+          </p>
+        </div>
+        {(t.unread_count ?? 0) > 0 && (
+          <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-crisis text-bone text-[11px] font-mono font-bold flex items-center justify-center">
+            {t.unread_count}
+          </span>
+        )}
+      </Link>
+    </li>
+  );
+}
+
+function FreshConnectionRow({
+  c,
+  onPick,
+  pending,
+}: {
+  c: any;
+  onPick: (id: string) => void;
+  pending: boolean;
+}) {
+  const online = useOnlineStatus(c.other?.last_seen_at);
+  return (
+    <li>
+      <button
+        onClick={() => c.other?.id && onPick(c.other.id)}
+        disabled={pending}
+        className="w-full text-left px-3 py-2.5 hover:bg-ink/[.02] flex items-center gap-3"
+      >
+        <Avatar
+          name={c.other?.alias ?? "Member"}
+          src={c.other?.avatar_url}
+          size={36}
+          online={online}
+        />
+        <div className="min-w-0 flex-1">
+          <strong className="block truncate text-sm">{c.other?.alias ?? "Member"}</strong>
+          <span className="text-xs text-ink3">Connected · tap to message</span>
+        </div>
+      </button>
+    </li>
   );
 }

@@ -12,7 +12,7 @@ export type Connection = {
   message: string | null;
   created_at: string;
   responded_at: string | null;
-  other?: { id: string; alias: string | null; avatar_url: string | null } | null;
+  other?: { id: string; alias: string | null; avatar_url: string | null; last_seen_at: string | null } | null;
   direction: "outgoing" | "incoming";
 };
 
@@ -47,7 +47,7 @@ export function useMyConnections() {
       if (otherIds.length > 0) {
         const { data: profs } = await (supa as any)
           .from("profiles")
-          .select("id, alias, avatar_url")
+          .select("id, alias, avatar_url, last_seen_at")
           .in("id", otherIds);
         profMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
       }

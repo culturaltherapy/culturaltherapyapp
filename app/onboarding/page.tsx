@@ -268,6 +268,7 @@ export default function Onboarding() {
       case 2:  return (
         validateShortLabel(s.realName, { min: 2, max: 80, label: "Real name" }).ok
         && validateShortLabel(s.alias, { min: 2, max: 24, label: "Username" }).ok
+        && validateMeaningful(s.bio, { minChars: 30, minWords: 8, label: "Bio" }).ok
       );
       case 3:  return s.descent.length > 0;
       case 4:  {
@@ -283,7 +284,7 @@ export default function Onboarding() {
       case 7:  return s.prompts.filter((p) => {
         const rule = getPromptValidationRule(p.question, promptLibrary);
         return validateMeaningful(p.answer, rule).ok;
-      }).length >= 2;
+      }).length >= 5;
       case 8:  return true;
       case 9:  return s.idStatus === "verified";
       case 10: return s.cocAccepted;
@@ -581,7 +582,7 @@ function StepCreateAccount({ onSuccess, existingEmail }: { onSuccess: () => void
         Create your account first.
       </h1>
       <p className="text-ink2 mt-2">
-        Your real name stays private — we use an alias. Takes 30 seconds.
+        Your real name stays private. We use a username. Takes 30 seconds.
       </p>
 
       {/* Google */}
@@ -658,7 +659,7 @@ function StepWelcome() {
       <ul className="mt-6 space-y-2.5 text-ink2 text-[15px]">
         <li className="flex items-start gap-2">
           <Icon name="check" size={18} className="text-forest mt-0.5" />
-          Your real name stays private. We use an alias.
+          Your real name stays private. We use a username.
         </li>
         <li className="flex items-start gap-2">
           <Icon name="check" size={18} className="text-forest mt-0.5" />
@@ -684,9 +685,7 @@ function StepIdentity({ s, patch }: { s: State; patch: (p: Partial<State>) => vo
     ? { ok: true as const }
     : validateShortLabel(s.alias, { min: 2, max: 24, label: "Username" });
 
-  const bioValid = s.bio.trim().length === 0
-    ? { ok: true as const }
-    : validateMeaningful(s.bio, { minChars: 30, minWords: 8, label: "Bio" });
+  const bioValid = validateMeaningful(s.bio, { minChars: 30, minWords: 8, label: "Bio" });
 
   return (
     <div>
@@ -737,9 +736,10 @@ function StepIdentity({ s, patch }: { s: State; patch: (p: Partial<State>) => vo
         </Field>
 
         <Field
-          label="Short bio (optional)"
+          label="Short bio"
+          required
           hint="A few sentences about who you are. 30–400 characters."
-          error={bioValid.ok ? undefined : bioValid.reason}
+          error={s.bio.trim().length === 0 || bioValid.ok ? undefined : bioValid.reason}
         >
           <Textarea
             rows={4}
@@ -762,9 +762,9 @@ function StepRoots({ s, patch }: { s: State; patch: (p: Partial<State>) => void 
       <StepHeader
         kicker="Step 3 · Roots"
         title="Where are your people from?"
-        body="Pick everything that feels like you — multiple heritages are welcome, and you can type your own if it's not listed."
+        body="Pick everything that feels like you. Add more than one if you have multiple heritages — and you can type your own if it's not listed."
       />
-      <Field label="Heritage / descent" required hint="Add as many as feel right. Mixed heritage is a first-class option here.">
+      <Field label="Heritage / descent" required hint="Add more than one if you have multiple heritages.">
         <TagPicker
           value={s.descent}
           onChange={(v) => patch({ descent: v })}
@@ -1035,7 +1035,7 @@ function StepPrompts({ s, patch }: { s: State; patch: (p: Partial<State>) => voi
       </div>
 
       <p className="mt-4 text-xs text-ink3 sticky bottom-2 bg-parchment/90 rounded-md py-1 px-2 inline-block">
-        {answered} meaningful answer{answered === 1 ? "" : "s"} · 2 required to continue
+        {answered} meaningful answer{answered === 1 ? "" : "s"} · 5 required to continue
       </p>
     </div>
   );
@@ -1075,7 +1075,7 @@ function StepAvatar({ s, patch }: { s: State; patch: (p: Partial<State>) => void
         <label className="inline-flex items-center gap-2 rounded-md border border-line bg-bone px-4 py-2.5 text-sm cursor-pointer hover:bg-ink/5">
           <Icon name="camera" size={16} />
           {s.avatar ? "Replace photo" : "Choose photo"}
-          <input type="file" accept="image/*" capture="user" className="hidden" onChange={onPick} />
+          <input type="file" accept="image/*" className="hidden" onChange={onPick} />
         </label>
       </div>
 
@@ -1113,7 +1113,7 @@ function StepID({ s, patch }: { s: State; patch: (p: Partial<State>) => void }) 
       <StepHeader
         kicker="Step 9 · ID verification"
         title="One quick check. Then you're in."
-        body="We verify ID through a third-party (Persona). They store the document — we only see a 'verified' flag. This is required before you can post publicly, and it keeps the network safer."
+        body="Beta note: we're auto-verifying for now while we finish integrating with our ID partner (Persona). You'll be flagged as ID-verified instantly, and we'll re-run real verification before public launch. Your documents will never be stored on our servers."
       />
       {s.idStatus === "idle" && (
         <Button onClick={start} size="lg">Start verification</Button>
@@ -1142,7 +1142,7 @@ function StepCoC({ s, patch }: { s: State; patch: (p: Partial<State>) => void })
       <StepHeader
         kicker="Step 10 · Code of conduct"
         title="Read each clause. Then accept."
-        body="Tap each one to expand it. Mods enforce these."
+        body="Tap each one to expand it. Moderators enforce these."
       />
       <ul className="space-y-2">
         {codeOfConduct.map((c, i) => {

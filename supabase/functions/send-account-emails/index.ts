@@ -55,7 +55,7 @@ function shell(title: string, body: string, cta?: { label: string; href: string 
 </body></html>`;
 }
 
-type Tpl = { subject: string; html: (payload: any) => string };
+type Tpl = { subject: string | ((p: any) => string); html: (payload: any) => string };
 
 const TEMPLATES: Record<string, Tpl> = {
   account_deactivated: {
@@ -101,6 +101,22 @@ const TEMPLATES: Record<string, Tpl> = {
          <p style="color:${BRAND.ink3};font-size:13px;margin-top:24px;">If you ever want to come back, you're always welcome to sign up again with a fresh account.</p>`,
         undefined
       ),
+  },
+  direct_message: {
+    subject: (p) => `You have a new message from ${p?.sender_alias ?? "a member"}`,
+    html: (p) => {
+      const alias = escapeHtml(p?.sender_alias ?? "A member");
+      const excerpt = escapeHtml(p?.excerpt ?? "");
+      const threadId = p?.thread_id;
+      const href = threadId ? `${APP_URL}/messages/${threadId}` : `${APP_URL}/messages`;
+      return shell(
+        `${alias} sent you a message.`,
+        `<p>You've got a new direct message on Cultural Therapy.</p>
+         ${excerpt ? `<p style="margin-top:14px;background:${BRAND.parchment};border-left:3px solid ${BRAND.terracotta};padding:10px 14px;border-radius:6px;font-style:italic;">${excerpt}</p>` : ""}
+         <p style="color:${BRAND.ink3};font-size:13px;margin-top:24px;">You can switch these emails off any time in <em>Profile → Edit → Contact preferences</em>.</p>`,
+        { label: `Reply to ${alias}`, href }
+      );
+    },
   },
 };
 
@@ -168,7 +184,7 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           from: FROM,
           to: e.to_email,
-          subject: tpl.subject,
+          subject: typeof tpl.subject === "function" ? tpl.subject(e.payload ?? {}) : tpl.subject,
           html: tpl.html(e.payload ?? {}),
         }),
       });

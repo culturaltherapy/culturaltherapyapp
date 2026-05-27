@@ -717,6 +717,7 @@ function DiagnosisEditor({ userId, profile, onSaved }: { userId: string; profile
 function ContactEditor({ userId, profile, onSaved }: { userId: string; profile: any; onSaved: () => void }) {
   const [tribe, setTribe] = React.useState(profile.accepts_tribe_requests !== false);
   const [dms, setDms] = React.useState(profile.accepts_dms !== false);
+  const [emailOnDm, setEmailOnDm] = React.useState((profile as any).email_on_dm !== false);
   const [calls, setCalls] = React.useState(profile.accepts_calls === true);
   const [video, setVideo] = React.useState(profile.accepts_video === true);
   const [visibility, setVisibility] = React.useState<"public" | "tribe" | "private">(
@@ -730,6 +731,7 @@ function ContactEditor({ userId, profile, onSaved }: { userId: string; profile: 
       patch={{
         accepts_tribe_requests: tribe,
         accepts_dms: dms,
+        email_on_dm: emailOnDm,
         accepts_calls: isPeerSupporter ? calls : false,
         accepts_video: isPeerSupporter ? video : false,
         connections_visibility: visibility,
@@ -744,6 +746,11 @@ function ContactEditor({ userId, profile, onSaved }: { userId: string; profile: 
         <label className="flex items-center gap-2 text-sm text-ink2">
           <input type="checkbox" checked={dms} onChange={(e) => setDms(e.target.checked)} className="accent-terracotta" />
           Accept direct messages from connections
+        </label>
+        <label className="flex items-center gap-2 text-sm text-ink2">
+          <input type="checkbox" checked={emailOnDm} onChange={(e) => setEmailOnDm(e.target.checked)} className="accent-terracotta" />
+          Email me when I get a new message
+          <span className="text-xs text-ink3">(once per thread per 15 min)</span>
         </label>
       </div>
 

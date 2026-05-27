@@ -14,6 +14,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { SafeguardingBanner } from "@/components/messages/SafeguardingBanner";
+import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 import { PrivacyShield } from "@/components/privacy/PrivacyShield";
 import { timeAgo } from "@/lib/utils";
 
@@ -21,7 +22,7 @@ type ThreadMeta = {
   id: string;
   user_a: string;
   user_b: string;
-  other: { id: string; alias: string | null; avatar_url: string | null } | null;
+  other: { id: string; alias: string | null; avatar_url: string | null; last_seen_at: string | null } | null;
 };
 
 export default function ThreadView() {
@@ -35,6 +36,7 @@ export default function ThreadView() {
   const [meta, setMeta] = React.useState<ThreadMeta | null>(null);
   const [draft, setDraft] = React.useState("");
   const bottomRef = React.useRef<HTMLDivElement>(null);
+  const otherOnline = useOnlineStatus(meta?.other?.last_seen_at);
 
   // Fetch thread + other user's profile once
   React.useEffect(() => {
@@ -52,7 +54,7 @@ export default function ThreadView() {
       const otherId = thread.user_a === me ? thread.user_b : thread.user_a;
       const { data: prof } = await (supa as any)
         .from("profiles")
-        .select("id, alias, avatar_url")
+        .select("id, alias, avatar_url, last_seen_at")
         .eq("id", otherId)
         .maybeSingle();
 
@@ -117,6 +119,7 @@ export default function ThreadView() {
           name={meta.other?.alias ?? "Member"}
           src={meta.other?.avatar_url}
           size={48}
+          online={otherOnline}
         />
         <div className="flex-1 min-w-0">
           <Link
@@ -129,12 +132,8 @@ export default function ThreadView() {
         </div>
       </header>
 
-      <div className="mt-4">
-        <SafeguardingBanner />
-      </div>
-
       {/* Messages — wrapped with PrivacyShield for screenshot deterrence */}
-      <PrivacyShield watermark={`@${myAlias}`} className="rounded-md">
+      <PrivacyShield watermark={`@${myAlias}`} className="rounded-md mt-4">
         <div className="surface p-4 flex flex-col h-[60dvh] min-h-[400px]">
           <ul className="flex-1 overflow-y-auto space-y-3 pr-1">
             {messages.length === 0 ? (
@@ -165,7 +164,13 @@ export default function ThreadView() {
             <div ref={bottomRef} />
           </ul>
 
-          <div className="mt-3 pt-3 border-t border-line flex items-end gap-2">
+          {/* Safety banner — sits directly above the composer so it's the last
+              thing the user sees before sending. Dismissible after first ack. */}
+          <div className="mt-3">
+            <SafeguardingBanner />
+          </div>
+
+          <div className="pt-3 border-t border-line flex items-end gap-2">
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}

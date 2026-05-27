@@ -43,7 +43,6 @@ export default function Landing() {
           <p className="mt-5 text-ink2 text-lg max-w-prose">
             Cultural Therapy is a peer network for the diaspora. Build a Tribe.
             Host conversations in your Village. Train as a peer supporter.
-            Warm primary, activist where it matters.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -60,7 +59,7 @@ export default function Landing() {
           </div>
 
           <p className="mt-5 text-xs text-ink3">
-            ID-verified members · Crisis support on every screen · Mods on call 24/7
+            ID-verified members · Crisis support on every screen · Moderators on call 24/7
           </p>
         </div>
       </section>
