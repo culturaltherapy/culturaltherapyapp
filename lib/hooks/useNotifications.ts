@@ -17,7 +17,8 @@ export type NotificationKind =
   | "prompt_comment"
   | "prompt_like"
   | "report_received"
-  | "report_crisis";
+  | "report_crisis"
+  | "mod_call_missed";
 
 export type Notification = {
   id: string;

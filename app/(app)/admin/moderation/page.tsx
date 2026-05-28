@@ -18,6 +18,8 @@ import { Chip } from "@/components/ui/Chip";
 import { Icon } from "@/components/ui/Icon";
 import { timeAgo } from "@/lib/utils";
 import { ReportTargetPreview } from "@/components/moderation/ReportTargetPreview";
+import { CallControls } from "@/components/calls/CallControls";
+import { useReportAuthor } from "@/lib/hooks/useReportAuthor";
 
 // Tables that mod_hide_content() supports. Used to decide whether to show
 // the "Hide / Restore" button for a given report row.
@@ -206,9 +208,12 @@ function formatAction(action: string): string {
 function ReportRow({ r }: { r: ModReport }) {
   const setStatus = useSetReportStatus();
   const hideContent = useHideContent();
+  const { data: author } = useReportAuthor(r.target_table, r.target_id);
 
   const canHide =
     r.target_table != null && HIDEABLE_TABLES.has(r.target_table) && r.target_id != null;
+  // Don't try to call the same person twice if reporter == author
+  const reporterIsAuthor = author?.id != null && author.id === r.reporter_id;
 
   const sevClass =
     r.severity === "crisis"
@@ -310,6 +315,30 @@ function ReportRow({ r }: { r: ModReport }) {
           </button>
         ))}
       </div>
+
+      {/* Call controls — start a voice or video call with the author of
+          the reported content and / or the reporter. Hidden if we don't
+          have a clear author or if the report is already dismissed. */}
+      {r.status !== "dismissed" && (author || r.reporter_id) && (
+        <div className="pl-1 flex flex-wrap gap-4 pt-2 border-t border-line">
+          {author && (
+            <CallControls
+              recipientId={author.id}
+              recipientAlias={author.alias}
+              reportId={r.id}
+              label={reporterIsAuthor ? "Call author / reporter" : "Call author"}
+            />
+          )}
+          {r.reporter_id && !reporterIsAuthor && (
+            <CallControls
+              recipientId={r.reporter_id}
+              recipientAlias={r.reporter?.alias}
+              reportId={r.id}
+              label="Call reporter"
+            />
+          )}
+        </div>
+      )}
     </li>
   );
 }

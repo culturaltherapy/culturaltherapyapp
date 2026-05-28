@@ -156,6 +156,8 @@ function describe(n: Notification): string {
       return `filed a new report`;
     case "report_crisis":
       return `🚨 filed a CRISIS-severity report — needs attention now`;
+    case "mod_call_missed":
+      return `tried to call you — moderator outreach`;
     default:
       return "did something";
   }
@@ -187,6 +189,9 @@ function linkFor(n: Notification): string | null {
     case "report_received":
     case "report_crisis":
       return "/admin/moderation";
+    case "mod_call_missed":
+      // We don't have a dedicated "missed calls" inbox yet — link to home
+      return "/home";
     default:
       return null;
   }
