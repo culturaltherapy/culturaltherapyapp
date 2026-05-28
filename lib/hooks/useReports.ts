@@ -30,25 +30,20 @@ export function useFileReport() {
       const supa = getSupabaseBrowser();
       if (!supa) throw new Error("Not configured");
 
-      const { data: { session } } = await supa.auth.getSession();
-      if (!session) throw new Error("Sign in to file a report.");
-
-      const { data, error } = await (supa as any)
-        .from("mod_reports")
-        .insert({
-          reporter_id:  session.user.id,
-          target_kind:  input.targetKind,
-          target_table: input.targetTable,
-          target_id:    input.targetId,
-          reason:       input.reason,
-          severity:     input.severity,
-          notes:        input.notes ?? null,
-        })
-        .select()
-        .single();
+      // Use the SECURITY DEFINER RPC so reporter_id is set server-side
+      // from auth.uid() — sidesteps any client-side header edge cases that
+      // could otherwise make the INSERT RLS reject the row.
+      const { data, error } = await (supa as any).rpc("file_mod_report", {
+        p_target_kind:  input.targetKind,
+        p_target_table: input.targetTable,
+        p_target_id:    input.targetId,
+        p_reason:       input.reason,
+        p_severity:     input.severity,
+        p_notes:        input.notes ?? null,
+      });
 
       if (error) throw error;
-      return data;
+      return { id: data };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["moderation_queue"] });
