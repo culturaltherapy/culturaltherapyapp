@@ -17,19 +17,28 @@ type RoomOptions = {
   displayName?: string;
   /** When true, video is on by default; otherwise audio-only. */
   withVideo?: boolean;
-  /** Skip the "are you ready" lobby screen. */
+  /** Skip the "are you ready" prejoin/lobby screen. */
   prejoinDisabled?: boolean;
 };
 
-/** Build a meet.jit.si URL with sensible defaults pre-filled. */
+/** Build a meet.jit.si URL with sensible defaults pre-filled.
+ *  All config flags + the displayName are passed via the URL hash, which
+ *  is the format Jitsi's in-app config reader expects.
+ */
 export function roomUrl(roomName: string, opts: RoomOptions = {}): string {
-  const params = new URLSearchParams();
-  if (opts.displayName) params.set("userInfo.displayName", opts.displayName);
-  // # is required by Jitsi to pass these as in-app config flags
-  const hashParams = new URLSearchParams();
-  hashParams.set("config.prejoinPageEnabled", String(!opts.prejoinDisabled === false));
-  hashParams.set("config.startWithAudioMuted", "false");
-  hashParams.set("config.startWithVideoMuted", String(!opts.withVideo));
-  hashParams.set("config.disableDeepLinking", "true");
-  return `https://meet.jit.si/${encodeURIComponent(roomName)}#${hashParams.toString()}`;
+  const flags: Record<string, string> = {
+    // Skip the "Join meeting" lobby when prejoinDisabled is true.
+    "config.prejoinPageEnabled": opts.prejoinDisabled ? "false" : "true",
+    "config.startWithAudioMuted": "false",
+    "config.startWithVideoMuted": opts.withVideo ? "false" : "true",
+    "config.disableDeepLinking": "true",
+  };
+  if (opts.displayName) {
+    // Jitsi expects the displayName quoted inside the URL hash.
+    flags["userInfo.displayName"] = `"${opts.displayName.replace(/"/g, "")}"`;
+  }
+  const hash = Object.entries(flags)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join("&");
+  return `https://meet.jit.si/${encodeURIComponent(roomName)}#${hash}`;
 }
