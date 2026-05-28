@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { Icon } from "@/components/ui/Icon";
 import { timeAgo } from "@/lib/utils";
+import { ReportTargetPreview } from "@/components/moderation/ReportTargetPreview";
 
 // Tables that mod_hide_content() supports. Used to decide whether to show
 // the "Hide / Restore" button for a given report row.
@@ -259,6 +260,8 @@ function ReportRow({ r }: { r: ModReport }) {
               {r.notes}
             </p>
           )}
+
+          <ReportTargetPreview targetTable={r.target_table} targetId={r.target_id} />
         </div>
 
         <div className="flex gap-1.5 flex-wrap">

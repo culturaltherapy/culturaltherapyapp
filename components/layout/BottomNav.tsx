@@ -4,11 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
+import { useIsModerator } from "@/lib/hooks/useIsModerator";
 
-const items: { href: string; label: string; icon: IconName }[] = [
+type Item = { href: string; label: string; icon: IconName };
+
+const baseItems: Item[] = [
   { href: "/home",        label: "Home",     icon: "home" },
   { href: "/network",     label: "Network",  icon: "users" },
-  { href: "/connections", label: "Connect",  icon: "heart" },
+  { href: "/messages",    label: "Messages", icon: "message" },
   { href: "/tribes",      label: "Tribe",    icon: "shield" },
   { href: "/discussions", label: "Discuss",  icon: "message" },
   { href: "/academy",     label: "Academy",  icon: "book" },
@@ -16,12 +19,18 @@ const items: { href: string; label: string; icon: IconName }[] = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const isModerator = useIsModerator();
+
+  const items: Item[] = isModerator
+    ? [...baseItems, { href: "/admin/moderation", label: "Mod", icon: "shield" }]
+    : baseItems;
+
   return (
     <nav
       className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-line bg-parchment/95 backdrop-blur"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="grid grid-cols-6">
+      <ul className={cn("grid", isModerator ? "grid-cols-7" : "grid-cols-6")}>
         {items.map((it) => {
           const active = pathname?.startsWith(it.href);
           return (

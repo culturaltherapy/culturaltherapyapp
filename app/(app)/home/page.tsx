@@ -13,6 +13,8 @@ import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { Ubuntu, Sankofa, Pyramid } from "@/components/motifs/Motifs";
 import { Icon } from "@/components/ui/Icon";
+import { useIsModerator } from "@/lib/hooks/useIsModerator";
+import { useModerationQueue } from "@/lib/hooks/useModerationQueue";
 
 export default function HomePage() {
   const router = useRouter();
@@ -53,6 +55,9 @@ export default function HomePage() {
           Hello {firstName}. Here's the room today.
         </h1>
       </section>
+
+      {/* Moderator-only card. Renders nothing for non-moderators. */}
+      <ModeratorCard />
 
       <section className="mt-8 grid lg:grid-cols-3 gap-5">
         {/* Suggested matches */}
@@ -269,5 +274,71 @@ function MyConnectionsCard() {
         </Link>
       </div>
     </article>
+  );
+}
+
+function ModeratorCard() {
+  const isModerator = useIsModerator();
+  // Skip the query entirely for non-moderators so we don't fire pointless
+  // requests that RLS would just reject.
+  const { data: reports = [] } = useModerationQueue();
+
+  if (!isModerator) return null;
+
+  const open = reports.filter((r) => r.status === "open").length;
+  const crisis = reports.filter((r) => r.status === "open" && r.severity === "crisis").length;
+  const high = reports.filter((r) => r.status === "open" && r.severity === "high").length;
+
+  return (
+    <section className="mt-6">
+      <article
+        className={`surface p-5 sm:p-6 relative overflow-hidden ${
+          crisis > 0 ? "border-crisis/40 ring-2 ring-crisis/20" : ""
+        }`}
+      >
+        <div className="flex items-start gap-4">
+          <div className={`mt-0.5 inline-flex items-center justify-center h-10 w-10 rounded-full ${
+            crisis > 0 ? "bg-crisis text-bone" : "bg-ink text-bone"
+          }`}>
+            <Icon name="shield" size={20} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="eyebrow flex items-center gap-2">
+              Moderator
+              {crisis > 0 && (
+                <span className="rounded-pill bg-crisis text-bone px-2 py-0.5 text-[10px] font-mono">
+                  CRISIS · {crisis}
+                </span>
+              )}
+            </p>
+            <h2 className="font-display text-xl sm:text-2xl mt-1 leading-tight">
+              {open === 0
+                ? "The queue is empty."
+                : crisis > 0
+                ? `${crisis} crisis report${crisis === 1 ? "" : "s"} need you now.`
+                : open === 1
+                ? "1 open report waiting."
+                : `${open} open reports waiting.`}
+            </h2>
+            <p className="text-ink2 text-sm mt-1">
+              {open === 0
+                ? "Quiet day — nothing to triage."
+                : `${high} high-severity · ${open - crisis - high} normal-severity.`}
+            </p>
+          </div>
+          <Link
+            href="/admin/moderation"
+            className={`shrink-0 self-center inline-flex items-center gap-1.5 rounded-md px-3.5 py-2 text-sm font-medium ${
+              crisis > 0
+                ? "bg-crisis text-bone hover:opacity-90"
+                : "bg-ink text-bone hover:opacity-90"
+            }`}
+          >
+            Open queue
+            <Icon name="arrow" size={14} />
+          </Link>
+        </div>
+      </article>
+    </section>
   );
 }

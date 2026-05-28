@@ -8,14 +8,16 @@ import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 import { me } from "@/lib/mock-data";
 import { useSession } from "@/lib/hooks/useSession";
+import { useIsModerator } from "@/lib/hooks/useIsModerator";
 import { useUnreadCount } from "@/lib/hooks/useNotifications";
 import { NotificationsPanel } from "@/components/notifications/NotificationsPanel";
 import { UserMenu } from "@/components/layout/UserMenu";
 
-const navItems = [
+const baseNavItems = [
   { href: "/home",        label: "Home" },
   { href: "/network",     label: "Lived Experience" },
-  { href: "/connections", label: "My Connections" },
+  { href: "/connections", label: "Connections" },
+  { href: "/messages",    label: "Messages" },
   { href: "/tribes",      label: "My Tribe" },
   { href: "/discussions", label: "Discussions" },
   { href: "/academy",     label: "Academy" },
@@ -28,7 +30,13 @@ export function TopNav() {
   const avatarColor = (profile as any)?.avatar_color ?? me.avatarColor;
   const avatarUrl = (profile as any)?.avatar_url ?? null;
   const unread = useUnreadCount();
+  const isModerator = useIsModerator();
   const [notifOpen, setNotifOpen] = React.useState(false);
+
+  // Moderators get an extra nav item linking straight to the queue
+  const navItems = isModerator
+    ? [...baseNavItems, { href: "/admin/moderation", label: "Moderation" }]
+    : baseNavItems;
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-parchment/85 backdrop-blur supports-[backdrop-filter]:bg-parchment/70">
