@@ -167,7 +167,7 @@ export default function ThreadView() {
           {/* Safety banner — sits directly above the composer so it's the last
               thing the user sees before sending. Dismissible after first ack. */}
           <div className="mt-3">
-            <SafeguardingBanner />
+            <SafeguardingBanner threadId={params.threadId} />
           </div>
 
           <div className="pt-3 border-t border-line flex items-end gap-2">

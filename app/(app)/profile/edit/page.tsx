@@ -724,6 +724,10 @@ function ContactEditor({ userId, profile, onSaved }: { userId: string; profile: 
     (profile.connections_visibility ?? "tribe") as any,
   );
   const isPeerSupporter = profile.is_peer_supporter === true;
+  const isModerator = (profile as any).is_moderator === true;
+  // Moderators get the same call/video capabilities as peer supporters so they
+  // can step in on crisis or escalation calls without finishing the Academy.
+  const canAcceptCalls = isPeerSupporter || isModerator;
 
   return (
     <SaveForm
@@ -732,8 +736,8 @@ function ContactEditor({ userId, profile, onSaved }: { userId: string; profile: 
         accepts_tribe_requests: tribe,
         accepts_dms: dms,
         email_on_dm: emailOnDm,
-        accepts_calls: isPeerSupporter ? calls : false,
-        accepts_video: isPeerSupporter ? video : false,
+        accepts_calls: canAcceptCalls ? calls : false,
+        accepts_video: canAcceptCalls ? video : false,
         connections_visibility: visibility,
       }}
       onSaved={onSaved}
@@ -779,16 +783,18 @@ function ContactEditor({ userId, profile, onSaved }: { userId: string; profile: 
       </div>
 
       <div className="mt-5 pt-4 border-t border-line">
-        <p className="eyebrow mb-2">Voice and video — peer-supporter only</p>
+        <p className="eyebrow mb-2">
+          Voice and video — {isModerator ? "moderator" : "peer-supporter"} only
+        </p>
         <p className="text-sm text-ink2 mb-3">
           For safeguarding reasons, voice and video calls are only available
-          between members who've completed the Peer Support Academy. Phone numbers
-          and home addresses should never be shared in chat or calls — if you
-          spot someone sharing or asking for that, report it from the message
-          menu.
+          between members who've completed the Peer Support Academy or who are
+          assigned moderators. Phone numbers and home addresses should never be
+          shared in chat or calls — if you spot someone sharing or asking for
+          that, report it from the message menu.
         </p>
 
-        {!isPeerSupporter ? (
+        {!canAcceptCalls ? (
           <div className="rounded-md bg-ochre/10 border border-ochre/30 px-3 py-3 text-sm">
             <p className="text-ink2">
               To turn these on, complete the{" "}

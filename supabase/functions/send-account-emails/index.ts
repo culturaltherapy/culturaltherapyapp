@@ -118,6 +118,27 @@ const TEMPLATES: Record<string, Tpl> = {
       );
     },
   },
+  report_crisis: {
+    subject: (_p) => `🚨 Crisis-severity report on Cultural Therapy`,
+    html: (p) => {
+      const targetKind = escapeHtml(String(p?.target_kind ?? "content"));
+      const targetTable = escapeHtml(String(p?.target_table ?? ""));
+      const reason = escapeHtml(String(p?.reason ?? "crisis"));
+      const notes = escapeHtml(String(p?.notes ?? ""));
+      const href = `${APP_URL}/admin/moderation`;
+      return shell(
+        "A crisis-severity report just came in.",
+        `<p>A member has filed a <strong>crisis-severity</strong> report on Cultural Therapy. This needs a moderator to look at it within 15 minutes.</p>
+         <ul style="margin-top:14px;padding:0 0 0 18px;color:${BRAND.ink2};">
+           <li><strong>Target:</strong> ${targetKind}${targetTable ? ` (<code style="font-family:monospace;font-size:13px;">${targetTable}</code>)` : ""}</li>
+           <li><strong>Reason:</strong> ${reason}</li>
+         </ul>
+         ${notes ? `<p style="margin-top:14px;background:${BRAND.parchment};border-left:3px solid ${BRAND.terracotta};padding:10px 14px;border-radius:6px;font-style:italic;">${notes}</p>` : ""}
+         <p style="color:${BRAND.ink3};font-size:13px;margin-top:24px;">You're receiving this because you're listed as a moderator on Cultural Therapy.</p>`,
+        { label: "Open the moderation queue", href }
+      );
+    },
+  },
 };
 
 function escapeHtml(s: string): string {

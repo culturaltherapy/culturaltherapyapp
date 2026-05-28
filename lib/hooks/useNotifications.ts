@@ -15,7 +15,9 @@ export type NotificationKind =
   | "media_comment"
   | "media_like"
   | "prompt_comment"
-  | "prompt_like";
+  | "prompt_like"
+  | "report_received"
+  | "report_crisis";
 
 export type Notification = {
   id: string;

@@ -15,6 +15,7 @@ import { useSession } from "@/lib/hooks/useSession";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { timeAgo } from "@/lib/utils";
+import { ReportButton } from "@/components/moderation/ReportButton";
 
 const VIS_LABEL: Record<WallPost["visibility"], string> = {
   public:  "PUBLIC",
@@ -121,7 +122,7 @@ export function PostCard({
           <span className="text-xs text-ink3 italic">Reactions are off</span>
         )}
 
-        {canDelete && (
+        {canDelete ? (
           <button
             onClick={handleDelete}
             disabled={del.isPending}
@@ -129,6 +130,16 @@ export function PostCard({
           >
             {del.isPending ? "Deleting…" : confirming ? "Tap again to confirm delete" : "Delete"}
           </button>
+        ) : (
+          <div className="ml-auto">
+            <ReportButton
+              targetKind="post"
+              targetTable="posts"
+              targetId={post.id}
+              targetLabel="this post"
+              variant="link"
+            />
+          </div>
         )}
       </div>
 
@@ -193,13 +204,23 @@ function PostComments({ postId }: { postId: string }) {
                     {c.author?.alias ?? "Member"}
                   </Link>
                   <span>{timeAgo(c.created_at)}</span>
-                  {c.author_id === userId && (
+                  {c.author_id === userId ? (
                     <button
                       onClick={() => remove(c.id)}
                       className={`ml-auto ${confirming === c.id ? "text-crisis font-medium" : "text-ink3"} hover:text-crisis`}
                     >
                       {confirming === c.id ? "tap again" : "delete"}
                     </button>
+                  ) : (
+                    <div className="ml-auto">
+                      <ReportButton
+                        targetKind="comment"
+                        targetTable="post_comments"
+                        targetId={c.id}
+                        targetLabel="this comment"
+                        variant="link"
+                      />
+                    </div>
                   )}
                 </div>
                 <p className="text-sm mt-0.5 whitespace-pre-wrap">{c.body}</p>

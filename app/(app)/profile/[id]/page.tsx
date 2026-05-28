@@ -17,6 +17,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
+import { ReportButton } from "@/components/moderation/ReportButton";
 import { EyeOfHorus } from "@/components/motifs/Motifs";
 import { Icon } from "@/components/ui/Icon";
 import { InviteToTribeModal } from "@/components/tribes/InviteToTribeModal";
@@ -174,6 +175,16 @@ export default function ViewProfile() {
                   Message · connect first
                 </span>
               )}
+
+              <div className="self-end">
+                <ReportButton
+                  targetKind="profile"
+                  targetTable="profiles"
+                  targetId={params.id}
+                  targetLabel={`${alias}'s profile`}
+                  variant="link"
+                />
+              </div>
             </div>
           )}
         </div>

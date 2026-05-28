@@ -11,6 +11,7 @@ import {
 import { InteractionsSection } from "@/components/interactions/InteractionsSection";
 import { useSession } from "@/lib/hooks/useSession";
 import { useProfile } from "@/lib/hooks/useProfile";
+import { ReportButton } from "@/components/moderation/ReportButton";
 import {
   useMediaInteractions,
   useLikeMedia,
@@ -186,6 +187,18 @@ export function MediaGallery({
               ownerId={ownerId}
             />
 
+            {!canEdit && (
+              <div className="mt-3 flex justify-end">
+                <ReportButton
+                  targetKind="post"
+                  targetTable="profile_media"
+                  targetId={localItems[openIdx].id}
+                  targetLabel="this media"
+                  variant="link"
+                />
+              </div>
+            )}
+
             <div className="mt-3 flex items-center justify-between text-xs text-ink3">
               <span>{openIdx + 1} / {localItems.length}</span>
               <div className="flex gap-2">
@@ -253,6 +266,7 @@ function MediaInteractionsRow({ mediaId, ownerId }: { mediaId: string; ownerId: 
       variant="modal"
       allowLikes={allowLikes}
       allowComments={allowComments}
+      commentsTable="media_comments"
     />
   );
 }

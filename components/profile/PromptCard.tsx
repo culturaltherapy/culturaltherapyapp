@@ -3,6 +3,7 @@
 import * as React from "react";
 import { InteractionsSection } from "@/components/interactions/InteractionsSection";
 import { useSession } from "@/lib/hooks/useSession";
+import { ReportButton } from "@/components/moderation/ReportButton";
 import {
   usePromptInteractions,
   useLikePrompt,
@@ -16,6 +17,8 @@ export type PromptCardData = {
   id: string;
   question: string;
   answer: string;
+  /** owner of the prompt — passed so we can suppress the Report button on self-views */
+  user_id?: string;
 };
 
 /**
@@ -45,6 +48,7 @@ export function PromptCard({
   const iLiked = interactions?.iLiked ?? false;
   const likeCount = interactions?.likeCount ?? 0;
   const commentCount = interactions?.commentCount ?? 0;
+  const isOwn = userId != null && prompt.user_id != null && prompt.user_id === userId;
 
   function toggleLike() {
     if (iLiked) unlike.mutate(prompt.id);
@@ -53,8 +57,22 @@ export function PromptCard({
 
   return (
     <li className="surface p-5">
-      <p className="eyebrow">{prompt.question}</p>
-      <p className="font-display text-lg mt-1 italic leading-snug">&ldquo;{prompt.answer}&rdquo;</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="eyebrow">{prompt.question}</p>
+          <p className="font-display text-lg mt-1 italic leading-snug">&ldquo;{prompt.answer}&rdquo;</p>
+        </div>
+        {!isOwn && (
+          <ReportButton
+            targetKind="post"
+            targetTable="profile_prompts"
+            targetId={prompt.id}
+            targetLabel="this prompt"
+            variant="link"
+            className="shrink-0"
+          />
+        )}
+      </div>
 
       <InteractionsSection
         iLiked={iLiked}
@@ -74,6 +92,7 @@ export function PromptCard({
         variant="inline"
         allowLikes={allowLikes}
         allowComments={allowComments}
+        commentsTable="prompt_comments"
       />
     </li>
   );

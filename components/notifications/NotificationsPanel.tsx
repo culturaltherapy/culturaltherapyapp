@@ -82,8 +82,17 @@ function NotificationRow({ n, onClick }: { n: Notification; onClick: () => void 
   const unread = !n.read_at;
   const source = n.source;
 
+  const isCrisis = n.kind === "report_crisis";
   const body = (
-    <div className={`px-4 py-3 flex gap-3 ${unread ? "bg-terracotta/5" : ""} hover:bg-ink/5 transition`}>
+    <div
+      className={`px-4 py-3 flex gap-3 transition ${
+        isCrisis
+          ? "bg-crisis/10 border-l-2 border-crisis"
+          : unread
+          ? "bg-terracotta/5"
+          : ""
+      } hover:bg-ink/5`}
+    >
       <Avatar
         name={source?.alias ?? "?"}
         src={source?.avatar_url}
@@ -143,6 +152,10 @@ function describe(n: Notification): string {
       return `commented on your prompt answer`;
     case "prompt_like":
       return `liked your prompt answer`;
+    case "report_received":
+      return `filed a new report`;
+    case "report_crisis":
+      return `🚨 filed a CRISIS-severity report — needs attention now`;
     default:
       return "did something";
   }
@@ -171,6 +184,9 @@ function linkFor(n: Notification): string | null {
     case "prompt_comment":
     case "prompt_like":
       return "/profile?tab=about";
+    case "report_received":
+    case "report_crisis":
+      return "/admin/moderation";
     default:
       return null;
   }

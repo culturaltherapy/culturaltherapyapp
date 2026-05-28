@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { timeAgo } from "@/lib/utils";
+import { ReportButton } from "@/components/moderation/ReportButton";
 
 export type InteractionsComment = {
   id: string;
@@ -31,6 +32,9 @@ type Props = {
   allowLikes?: boolean;
   /** Hide the 💬 button (owner has disabled comments on this surface). */
   allowComments?: boolean;
+  /** Table name backing these comments — 'media_comments' or 'prompt_comments'.
+   *  Used to construct a Report button next to each non-author comment. */
+  commentsTable?: string;
 };
 
 /**
@@ -54,6 +58,7 @@ export function InteractionsSection({
   variant = "inline",
   allowLikes = true,
   allowComments = true,
+  commentsTable,
 }: Props) {
   const [showComments, setShowComments] = React.useState(expandedByDefault);
 
@@ -116,6 +121,7 @@ export function InteractionsSection({
           onAddComment={onAddComment}
           onDeleteComment={onDeleteComment}
           currentUserId={currentUserId}
+          commentsTable={commentsTable}
         />
       )}
     </div>
@@ -128,12 +134,14 @@ function CommentsThread({
   onAddComment,
   onDeleteComment,
   currentUserId,
+  commentsTable,
 }: {
   comments: InteractionsComment[];
   isLoading: boolean;
   onAddComment: (body: string) => Promise<void>;
   onDeleteComment: (commentId: string) => Promise<void>;
   currentUserId: string | null;
+  commentsTable?: string;
 }) {
   const [draft, setDraft] = React.useState("");
   const [posting, setPosting] = React.useState(false);
@@ -184,14 +192,24 @@ function CommentsThread({
                     {c.author?.alias ?? "Member"}
                   </Link>
                   <span>{timeAgo(c.created_at)}</span>
-                  {c.author_id === currentUserId && (
+                  {c.author_id === currentUserId ? (
                     <button
                       onClick={() => remove(c.id)}
                       className={`ml-auto ${confirming === c.id ? "text-crisis font-medium" : "text-ink3"} hover:text-crisis`}
                     >
                       {confirming === c.id ? "tap again" : "delete"}
                     </button>
-                  )}
+                  ) : commentsTable ? (
+                    <div className="ml-auto">
+                      <ReportButton
+                        targetKind="comment"
+                        targetTable={commentsTable}
+                        targetId={c.id}
+                        targetLabel="this comment"
+                        variant="link"
+                      />
+                    </div>
+                  ) : null}
                 </div>
                 <p className="text-sm mt-0.5 whitespace-pre-wrap">{c.body}</p>
               </div>

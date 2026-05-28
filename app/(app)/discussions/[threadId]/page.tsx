@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { timeAgo } from "@/lib/utils";
+import { ReportButton } from "@/components/moderation/ReportButton";
 
 export default function ThreadDetailPage() {
   const params = useParams<{ threadId: string }>();
@@ -85,6 +86,17 @@ export default function ThreadDetailPage() {
           </span>
           <span>·</span>
           <span>{timeAgo(thread.created_at)}</span>
+          {thread.author?.id && thread.author.id !== userId && (
+            <span className="ml-auto">
+              <ReportButton
+                targetKind="thread"
+                targetTable="discussion_posts"
+                targetId={thread.id}
+                targetLabel="this thread"
+                variant="link"
+              />
+            </span>
+          )}
         </div>
       </article>
 
@@ -117,6 +129,17 @@ export default function ThreadDetailPage() {
                   </span>
                   <span>·</span>
                   <span>{timeAgo(r.created_at)}</span>
+                  {r.author?.id && r.author.id !== userId && (
+                    <span className="ml-auto">
+                      <ReportButton
+                        targetKind="comment"
+                        targetTable="discussion_posts"
+                        targetId={r.id}
+                        targetLabel="this reply"
+                        variant="link"
+                      />
+                    </span>
+                  )}
                 </div>
                 <p className="mt-2 text-[15px] leading-relaxed whitespace-pre-wrap">{r.body}</p>
               </li>

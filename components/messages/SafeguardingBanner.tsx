@@ -2,10 +2,17 @@
 
 import * as React from "react";
 import { Icon } from "@/components/ui/Icon";
+import { ReportButton } from "@/components/moderation/ReportButton";
 
 const STORAGE_KEY = "ct.dm.safeguarding.dismissed";
 
-export function SafeguardingBanner() {
+type Props = {
+  /** Optional — when provided, renders a "Report this conversation" link
+   *  that files a thread-level report against the DM thread. */
+  threadId?: string | null;
+};
+
+export function SafeguardingBanner({ threadId }: Props = {}) {
   const [dismissed, setDismissed] = React.useState<boolean>(true); // start hidden to avoid SSR flash
 
   React.useEffect(() => {
@@ -28,8 +35,20 @@ export function SafeguardingBanner() {
         <strong className="text-ink">Stay safe in messages.</strong>{" "}
         Don't share phone numbers, addresses, financial details, or
         passwords here. If someone asks for any of those — or makes
-        you feel unsafe — use the report option in the menu. Crisis
-        support is always one tap away.
+        you feel unsafe — tap{" "}
+        {threadId ? (
+          <ReportButton
+            targetKind="thread"
+            targetTable="dm_threads"
+            targetId={threadId}
+            targetLabel="this conversation"
+            variant="link"
+            className="!inline !text-ink !underline"
+          />
+        ) : (
+          <span className="text-ink">Report</span>
+        )}
+        {" "}below. Crisis support is always one tap away.
       </div>
       <button
         onClick={dismiss}
