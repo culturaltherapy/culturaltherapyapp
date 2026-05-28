@@ -99,10 +99,21 @@ export default function SignInPage() {
       router.push("/home");
       return;
     }
-    await supa.auth.signInWithOAuth({
+    const { data, error } = await supa.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/home` }
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=/home` },
     });
+    if (error) {
+      console.error("signInWithOAuth error:", error);
+      alert(`Couldn't start Google sign-in: ${error.message}`);
+      return;
+    }
+    // Supabase returns a URL we need to navigate to. The SDK is supposed to
+    // do this for us, but if popup-blockers / browser quirks intercept the
+    // auto-redirect, we fall back to an explicit navigation.
+    if (data?.url && typeof window !== "undefined") {
+      window.location.assign(data.url);
+    }
   }
 
   return (

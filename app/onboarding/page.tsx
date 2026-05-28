@@ -562,16 +562,32 @@ function StepCreateAccount({ onSuccess, existingEmail }: { onSuccess: () => void
 
   async function handleGoogle() {
     setBusy(true);
+    setErr(null);
     const supa = getSupabaseBrowser();
     if (!supa) { onSuccess(); return; }
     // Redirect back to /onboarding after OAuth so the flow continues
-    await supa.auth.signInWithOAuth({
+    const { data, error } = await supa.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`
-      }
+        redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+      },
     });
-    // Page will navigate away — no need to setBusy(false)
+    if (error) {
+      console.error("signInWithOAuth error:", error);
+      setErr(`Couldn't start Google sign-in: ${error.message}`);
+      setBusy(false);
+      return;
+    }
+    // The SDK is supposed to redirect automatically, but in some browser
+    // contexts (popup blockers, embedded webviews) it returns the URL and
+    // expects the caller to navigate. Do that explicitly so we never fall
+    // silent.
+    if (data?.url && typeof window !== "undefined") {
+      window.location.assign(data.url);
+    } else {
+      setErr("Couldn't start Google sign-in. Try the email form below.");
+      setBusy(false);
+    }
   }
 
   return (
