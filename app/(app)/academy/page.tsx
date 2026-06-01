@@ -1,22 +1,48 @@
 import { Dwennimmen } from "@/components/motifs/Motifs";
 import { PeerSupporterSignupForm } from "@/components/academy/PeerSupporterSignupForm";
-import { AcademyDemo } from "@/components/academy/AcademyDemo";
+import { CourseCard } from "@/components/academy/CourseCard";
+import { ACADEMY_COURSES } from "@/lib/academy/foundations";
 
 export default function AcademyPage() {
   return (
     <div>
+      {/* COURSES — first real content in the Academy */}
+      <section>
+        <header>
+          <p className="eyebrow flex items-center gap-2">
+            Peer Support Academy
+          </p>
+          <h1 className="font-display text-4xl sm:text-5xl mt-2 leading-tight max-w-[22ch]">
+            Courses you can start now.
+          </h1>
+          <p className="text-ink2 mt-2 max-w-prose">
+            We're building these together with people who've been there. Some
+            courses are still in progress — open them anyway and tell us what
+            you'd change. Lessons open in a new tab on Teachable.
+          </p>
+        </header>
+
+        <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {ACADEMY_COURSES.map((course) => (
+            <li key={course.id}>
+              <CourseCard course={course} />
+            </li>
+          ))}
+        </ul>
+      </section>
+
       {/* CALLOUT — co-production pitch */}
-      <section className="relative overflow-hidden surface p-6 sm:p-10">
+      <section className="mt-12 relative overflow-hidden surface p-6 sm:p-10">
         <div className="absolute -top-12 -right-12 opacity-10 text-terracotta">
           <Dwennimmen size={280} />
         </div>
         <div className="relative max-w-3xl">
           <p className="eyebrow flex items-center gap-2">
-            Coming in v2 · Peer Support Academy
+            Co-produce with us
           </p>
-          <h1 className="font-display text-4xl sm:text-5xl mt-3 leading-tight">
+          <h2 className="font-display text-3xl sm:text-4xl mt-3 leading-tight">
             We're building the Academy <em>with</em> you — not for you.
-          </h1>
+          </h2>
           <p className="text-ink2 mt-4 max-w-prose text-[15px] leading-relaxed">
             Most peer-support training was written by people who've never sat on
             the other side of it. We want to do this differently. If you have
@@ -34,19 +60,6 @@ export default function AcademyPage() {
       {/* SIGNUP FORM */}
       <section className="mt-6">
         <PeerSupporterSignupForm />
-      </section>
-
-      {/* LIVE PREVIEW — full course demo */}
-      <section className="mt-12 sm:mt-16">
-        <div className="rounded-md bg-ochre/10 border border-ochre/30 px-4 py-3 mb-5 text-sm text-ink2">
-          <strong className="text-ink">A taste of what's coming.</strong>{" "}
-          The mockup below shows the kind of experience the Academy will offer
-          — modules, lessons, reflection prompts, cohort discussion. None of
-          the content is final; we're sharing it so you can feel the shape of
-          the thing before we build it with you.
-        </div>
-
-        <AcademyDemo />
       </section>
     </div>
   );
