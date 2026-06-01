@@ -48,12 +48,10 @@ export const FOUNDATIONS: AcademyCourse = {
   blurb:
     "The first stretch of the Peer Support Academy. Listening, scope, ethics, and culturally-rooted care — taught by people who've been here.",
   estimatedHours: 4,
-  // Note: this is the "preview as logged-in student" URL — works for the
-  // course owner. Swap for the public sales-page URL
-  // (https://culturaltherapy.teachable.com/p/<slug>) once the course is
-  // published.
+  // Public Product Detail Page — anyone can land here, sign-in / enrol
+  // flow happens on Teachable's side. Free course.
   teachableUrl:
-    "https://culturaltherapy.teachable.com/courses/enrolled/2986162?preview=logged_in",
+    "https://culturaltherapy.teachable.com/l/pdp/cultural-therapy-peer-support-academy-free-foundation-course",
   inProgress: true,
   modules: [
     // Add modules + lessons here as they land on Teachable. Each lesson can
