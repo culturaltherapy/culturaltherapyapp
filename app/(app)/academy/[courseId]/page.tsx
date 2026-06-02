@@ -4,6 +4,24 @@ import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Dwennimmen } from "@/components/motifs/Motifs";
 import { getAcademyCourse, type AcademyLesson, type AcademyModule } from "@/lib/academy/foundations";
+import { getSupabaseServer } from "@/lib/supabase/server";
+
+/**
+ * Append the signed-in user's email to a Teachable URL so Teachable's
+ * sign-up form is pre-filled when they land. Teachable picks up the
+ * `email_address` query param natively. Safe no-op when email is null or
+ * the URL is already malformed.
+ */
+function withEmail(url: string, email: string | null): string {
+  if (!email) return url;
+  try {
+    const u = new URL(url);
+    u.searchParams.set("email_address", email);
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
 
 export default async function CoursePage({
   params,
@@ -15,6 +33,17 @@ export default async function CoursePage({
   if (!course) return notFound();
 
   const totalLessons = course.modules.reduce((n, m) => n + m.lessons.length, 0);
+
+  // Pre-fill Teachable's sign-up form with the user's email so they don't
+  // have to retype it. Reads the session server-side; falls back to the
+  // bare URL when there's no session (e.g. anonymous-access deploys).
+  const supa = await getSupabaseServer();
+  let userEmail: string | null = null;
+  if (supa) {
+    const { data: { user } } = await supa.auth.getUser();
+    userEmail = user?.email ?? null;
+  }
+  const courseUrl = withEmail(course.teachableUrl, userEmail);
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -54,7 +83,7 @@ export default async function CoursePage({
           </div>
 
           <div className="mt-5">
-            <a href={course.teachableUrl} target="_blank" rel="noopener noreferrer">
+            <a href={courseUrl} target="_blank" rel="noopener noreferrer">
               <Button>
                 Open on Teachable <Icon name="arrow" size={14} />
               </Button>
@@ -79,7 +108,8 @@ export default async function CoursePage({
               key={mod.id}
               ordinal={mIdx + 1}
               module={mod}
-              fallbackUrl={course.teachableUrl}
+              fallbackUrl={courseUrl}
+              userEmail={userEmail}
             />
           ))}
         </section>
@@ -92,10 +122,12 @@ function ModuleBlock({
   ordinal,
   module: mod,
   fallbackUrl,
+  userEmail,
 }: {
   ordinal: number;
   module: AcademyModule;
   fallbackUrl: string;
+  userEmail: string | null;
 }) {
   return (
     <article className="surface p-5 sm:p-6">
@@ -113,6 +145,7 @@ function ModuleBlock({
             ordinal={lIdx + 1}
             lesson={lesson}
             fallbackUrl={fallbackUrl}
+            userEmail={userEmail}
           />
         ))}
       </ol>
@@ -124,12 +157,18 @@ function LessonRow({
   ordinal,
   lesson,
   fallbackUrl,
+  userEmail,
 }: {
   ordinal: number;
   lesson: AcademyLesson;
   fallbackUrl: string;
+  userEmail: string | null;
 }) {
-  const href = lesson.teachableUrl ?? fallbackUrl;
+  // Lesson-specific URL gets the email param too, falling back to the
+  // already-emailed course URL when no per-lesson URL is set.
+  const href = lesson.teachableUrl
+    ? withEmail(lesson.teachableUrl, userEmail)
+    : fallbackUrl;
   return (
     <li>
       <a
