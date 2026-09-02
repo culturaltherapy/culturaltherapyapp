@@ -11,6 +11,8 @@ export async function queueAccountEmail(opts: {
   userId: string;
   toEmail: string;
   template:
+    | "welcome_signup"
+    | "welcome_onboarding"
     | "account_deactivated"
     | "account_reactivated"
     | "deletion_requested"

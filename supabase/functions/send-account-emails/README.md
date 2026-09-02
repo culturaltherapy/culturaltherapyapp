@@ -42,10 +42,17 @@ supabase functions deploy send-account-emails --no-verify-jwt
 
 ## Templates currently supported
 
+- `welcome_signup` — queued automatically by the `on_auth_user_created`
+  trigger the instant a new `auth.users` row exists (email/password or
+  Google). Fires before onboarding, even if email confirmation is pending.
+- `welcome_onboarding` — queued by the app when onboarding completes
+  (`onboarding_completed_at` gets set)
 - `account_deactivated`
 - `account_reactivated`
 - `deletion_requested`
 - `deletion_completed` (sent by admin when manually fulfilling a request)
+- `direct_message`
+- `report_crisis`
 
 ## Manually drain the queue
 

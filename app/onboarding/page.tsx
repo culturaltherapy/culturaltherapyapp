@@ -18,6 +18,7 @@ import {
   CITIES_BY_COUNTRY,
 } from "@/lib/mock-data";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { queueAccountEmail } from "@/lib/email-queue";
 import { LanguagePicker } from "@/components/ui/LanguagePicker";
 import { TagPicker } from "@/components/ui/TagPicker";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -368,6 +369,12 @@ export default function Onboarding() {
           if (profileError) {
             console.error("Profile upsert error:", profileError.message);
             setSaveErr(profileError.message);
+          } else if (session.user.email) {
+            queueAccountEmail({
+              userId: session.user.id,
+              toEmail: session.user.email,
+              template: "welcome_onboarding",
+            });
           }
 
           // Save prompt answers. First clear any existing onboarding prompts

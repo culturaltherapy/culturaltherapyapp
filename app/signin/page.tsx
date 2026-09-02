@@ -64,6 +64,10 @@ export default function SignInPage() {
       } else if (mode === "signup") {
         const { data, error } = await supa.auth.signUp({ email, password });
         if (error) throw error;
+        // The auth.users trigger already queued a welcome_signup email —
+        // drain it now rather than waiting on some other action to do so.
+        // No auth required: the function is deployed with --no-verify-jwt.
+        supa.functions.invoke("send-account-emails", { body: {} }).catch(() => undefined);
         // If session is null, Supabase requires email confirmation first
         if (!data.session) {
           setMsg("Check your inbox — confirm your email, then sign in.");

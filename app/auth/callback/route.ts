@@ -23,6 +23,12 @@ export async function GET(request: Request) {
           .maybeSingle();
 
         const onboardingDone = profile?.onboarding_completed_at != null;
+        if (!onboardingDone) {
+          // Fresh (or still-onboarding) account — drain the queue in case
+          // the auth.users trigger just queued a welcome_signup email for
+          // this OAuth sign-up, so it doesn't wait on some other action.
+          await supabase.functions.invoke("send-account-emails", { body: {} }).catch(() => undefined);
+        }
         const destination = onboardingDone ? next : "/onboarding";
         return NextResponse.redirect(`${origin}${destination}`);
       }

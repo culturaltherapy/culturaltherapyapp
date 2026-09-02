@@ -118,6 +118,26 @@ const TEMPLATES: Record<string, Tpl> = {
       );
     },
   },
+  welcome_signup: {
+    subject: "Welcome to Cultural Therapy",
+    html: (_p) =>
+      shell(
+        "You're in.",
+        `<p>Your Cultural Therapy account has been created. This is a lived-experience community for the African/Caribbean/diaspora community — Tribes to find your people, a Village inside each one for threads and conversation.</p>
+         <p>Next up: a short onboarding so we can set up your profile properly.</p>`,
+        { label: "Finish setting up your profile", href: `${APP_URL}/onboarding` }
+      ),
+  },
+  welcome_onboarding: {
+    subject: "Your Cultural Therapy profile is live",
+    html: (_p) =>
+      shell(
+        "Welcome — your profile is live.",
+        `<p>Onboarding's done and your profile is ready. From here you can find Tribes that match your lived experience, and step into the Village inside each one to talk.</p>
+         <p style="color:${BRAND.ink3};font-size:13px;margin-top:24px;">If anything ever feels unsafe, the crisis banner at the top of the app is always there — no need to navigate to find it.</p>`,
+        { label: "Open Cultural Therapy", href: `${APP_URL}/home` }
+      ),
+  },
   report_crisis: {
     subject: (_p) => `🚨 Crisis-severity report on Cultural Therapy`,
     html: (p) => {
