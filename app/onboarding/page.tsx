@@ -285,7 +285,7 @@ export default function Onboarding() {
       case 7:  return s.prompts.filter((p) => {
         const rule = getPromptValidationRule(p.question, promptLibrary);
         return validateMeaningful(p.answer, rule).ok;
-      }).length >= 5;
+      }).length >= 3;
       case 8:  return true;
       case 9:  return s.idStatus === "verified";
       case 10: return s.cocAccepted;
@@ -1015,7 +1015,7 @@ function StepPrompts({ s, patch }: { s: State; patch: (p: Partial<State>) => voi
       <div className="text-terracotta mb-3"><Funtunfunefu size={48} /></div>
       <StepHeader
         kicker="Step 7 · Prompts"
-        title="Answer at least two."
+        title="Answer at least three."
         body="These are how Tribes find you. Skip any that don't fit — honest, specific answers travel further than polished ones."
       />
 
@@ -1058,7 +1058,7 @@ function StepPrompts({ s, patch }: { s: State; patch: (p: Partial<State>) => voi
       </div>
 
       <p className="mt-4 text-xs text-ink3 sticky bottom-2 bg-parchment/90 rounded-md py-1 px-2 inline-block">
-        {answered} meaningful answer{answered === 1 ? "" : "s"} · 5 required to continue
+        {answered} meaningful answer{answered === 1 ? "" : "s"} · 3 required to continue
       </p>
     </div>
   );

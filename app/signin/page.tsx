@@ -105,7 +105,12 @@ export default function SignInPage() {
     }
     const { data, error } = await supa.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=/home` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=/home`,
+        // Without this, Google silently reuses whatever account is already
+        // signed into the browser instead of showing the account picker.
+        queryParams: { prompt: "select_account" },
+      },
     });
     if (error) {
       console.error("signInWithOAuth error:", error);
