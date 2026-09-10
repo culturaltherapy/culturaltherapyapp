@@ -10,6 +10,7 @@ import { useDiscussionRooms } from "@/lib/hooks/useDiscussions";
 import { useMyConnections } from "@/lib/hooks/useConnections";
 import { useCommunityWallFeed } from "@/lib/hooks/useWallPosts";
 import { PostCard } from "@/components/posts/PostCard";
+import { PostComposer } from "@/components/posts/PostComposer";
 import { Avatar } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
@@ -283,8 +284,7 @@ function MyConnectionsCard() {
 
 function CommunityWallSection() {
   const { data: posts = [], isLoading } = useCommunityWallFeed();
-
-  if (!isLoading && posts.length === 0) return null;
+  const { userId } = useSession();
 
   return (
     <section className="mt-6">
@@ -294,15 +294,24 @@ function CommunityWallSection() {
           <h2 className="font-display text-2xl">What people are sharing publicly</h2>
         </div>
       </div>
+
+      {userId && (
+        <div className="mt-4">
+          <PostComposer fixedVisibility="public" placeholder="Share something with everyone on Cultural Therapy…" />
+        </div>
+      )}
+
       {isLoading ? (
         <p className="mt-3 text-sm text-ink3">Loading…</p>
+      ) : posts.length === 0 ? (
+        <p className="mt-4 text-sm text-ink3">Nothing shared publicly yet — be the first.</p>
       ) : (
         <ul className="mt-4 space-y-3">
           {posts.map((p) => (
             <PostCard
               key={p.id}
               post={p}
-              canDelete={false}
+              canDelete={p.owner_id === userId}
               allowLikes={p.owner?.allow_wall_likes !== false}
               allowComments={p.owner?.allow_wall_comments !== false}
               author={{ id: p.owner_id, alias: p.owner?.alias ?? null, avatar_url: p.owner?.avatar_url ?? null }}
