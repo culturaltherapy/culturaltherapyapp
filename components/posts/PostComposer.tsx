@@ -2,15 +2,9 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/Button";
-import { useCreatePost, type Visibility } from "@/lib/hooks/useWallPosts";
+import { useCreatePost, VIS_OPTIONS, type Visibility } from "@/lib/hooks/useWallPosts";
 
 const MAX = 500;
-
-const VIS_OPTIONS: { value: Visibility; label: string; description: string }[] = [
-  { value: "public",  label: "Public",   description: "Anyone on Cultural Therapy can see." },
-  { value: "tribe",   label: "My Tribes", description: "Only people in your Tribes." },
-  { value: "private", label: "Just me",   description: "Only you can see this." },
-];
 
 export function PostComposer() {
   const [body, setBody] = React.useState("");

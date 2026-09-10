@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useDeletePost, type WallPost } from "@/lib/hooks/useWallPosts";
+import { useDeletePost, useUpdatePostVisibility, VIS_OPTIONS, type WallPost } from "@/lib/hooks/useWallPosts";
 import {
   usePostInteractions,
   useLikePost,
@@ -29,6 +29,7 @@ export function PostCard({
   canDelete,
   allowLikes = true,
   allowComments = true,
+  author,
 }: {
   post: WallPost;
   canDelete: boolean;
@@ -36,8 +37,12 @@ export function PostCard({
   allowLikes?: boolean;
   /** Hide the 💬 button when the post-owner has switched comments off on their wall. */
   allowComments?: boolean;
+  /** Pass this to show a who-posted-this header — used on cross-member feeds
+   *  like the Community Wall, where posts aren't already scoped to one profile. */
+  author?: { id: string; alias: string | null; avatar_url: string | null };
 }) {
   const del = useDeletePost();
+  const updateVisibility = useUpdatePostVisibility();
   const [confirming, setConfirming] = React.useState(false);
 
   const { data: interactions } = usePostInteractions(post.id);
@@ -73,11 +78,40 @@ export function PostCard({
     else like.mutate(post.id);
   }
 
+  async function changeVisibility(next: WallPost["visibility"]) {
+    if (next === post.visibility) return;
+    try {
+      await updateVisibility.mutateAsync({ postId: post.id, visibility: next });
+    } catch (e: any) {
+      alert(e?.message ?? "Couldn't update visibility.");
+    }
+  }
+
   return (
     <li className="surface p-4">
+      {author && (
+        <Link href={`/profile/${author.id}`} className="flex items-center gap-2.5 mb-3">
+          <Avatar name={author.alias ?? "Member"} src={author.avatar_url} size={32} />
+          <strong className="text-sm hover:underline">{author.alias ?? "Member"}</strong>
+        </Link>
+      )}
       <div className="flex items-baseline justify-between text-xs text-ink3 gap-3">
         <span>{timeAgo(post.created_at)}{post.edited_at && " · edited"}</span>
-        <span className="font-mono uppercase">{VIS_LABEL[post.visibility]}</span>
+        {canDelete ? (
+          <select
+            value={post.visibility}
+            onChange={(e) => changeVisibility(e.target.value as WallPost["visibility"])}
+            disabled={updateVisibility.isPending}
+            aria-label="Change who can see this post"
+            className="font-mono uppercase text-xs bg-transparent border border-line rounded px-1.5 py-0.5 outline-none focus:border-terracotta disabled:opacity-50"
+          >
+            {VIS_OPTIONS.map((v) => (
+              <option key={v.value} value={v.value}>{v.label}</option>
+            ))}
+          </select>
+        ) : (
+          <span className="font-mono uppercase">{VIS_LABEL[post.visibility]}</span>
+        )}
       </div>
       <p className="mt-2 text-[15px] leading-relaxed whitespace-pre-wrap">{post.body}</p>
 

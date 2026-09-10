@@ -8,6 +8,8 @@ import { useProfiles } from "@/lib/hooks/useProfiles";
 import { useMyTribes } from "@/lib/hooks/useTribes";
 import { useDiscussionRooms } from "@/lib/hooks/useDiscussions";
 import { useMyConnections } from "@/lib/hooks/useConnections";
+import { useCommunityWallFeed } from "@/lib/hooks/useWallPosts";
+import { PostCard } from "@/components/posts/PostCard";
 import { Avatar } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
@@ -192,6 +194,8 @@ export default function HomePage() {
         <MyConnectionsCard />
       </section>
 
+      <CommunityWallSection />
+
       <div className="mt-10 flex flex-wrap items-center gap-2 text-sm">
         <Chip>Pyramid · Foundation</Chip>
         <span className="text-ink3">·</span>
@@ -274,6 +278,39 @@ function MyConnectionsCard() {
         </Link>
       </div>
     </article>
+  );
+}
+
+function CommunityWallSection() {
+  const { data: posts = [], isLoading } = useCommunityWallFeed();
+
+  if (!isLoading && posts.length === 0) return null;
+
+  return (
+    <section className="mt-6">
+      <div className="flex items-baseline justify-between">
+        <div>
+          <p className="eyebrow">Community Wall</p>
+          <h2 className="font-display text-2xl">What people are sharing publicly</h2>
+        </div>
+      </div>
+      {isLoading ? (
+        <p className="mt-3 text-sm text-ink3">Loading…</p>
+      ) : (
+        <ul className="mt-4 space-y-3">
+          {posts.map((p) => (
+            <PostCard
+              key={p.id}
+              post={p}
+              canDelete={false}
+              allowLikes={p.owner?.allow_wall_likes !== false}
+              allowComments={p.owner?.allow_wall_comments !== false}
+              author={{ id: p.owner_id, alias: p.owner?.alias ?? null, avatar_url: p.owner?.avatar_url ?? null }}
+            />
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
