@@ -124,7 +124,6 @@ export type PostComment = {
   author_id: string;
   body: string;
   created_at: string;
-  edited_at: string | null;
   author?: { id: string; alias: string | null; avatar_url: string | null } | null;
 };
 
@@ -138,7 +137,7 @@ export function usePostComments(postId: string | null | undefined, enabled = tru
 
       const { data: comments, error } = await (supa as any)
         .from("post_comments")
-        .select("id, post_id, author_id, body, created_at, edited_at")
+        .select("id, post_id, author_id, body, created_at")
         .eq("post_id", postId)
         .order("created_at", { ascending: true });
 
