@@ -125,7 +125,10 @@ export function useCommunityWallFeed(limit = 20) {
 
       const { data, error } = await (supa as any)
         .from("posts")
-        .select("id, owner_id, body, visibility, village_id, created_at, edited_at, owner:profiles(alias, avatar_url, allow_wall_likes, allow_wall_comments)")
+        // profiles!posts_owner_id_fkey disambiguates from the indirect
+        // posts -> post_likes -> profiles path, which PostgREST also finds
+        // and otherwise refuses to embed without specifying which one.
+        .select("id, owner_id, body, visibility, village_id, created_at, edited_at, owner:profiles!posts_owner_id_fkey(alias, avatar_url, allow_wall_likes, allow_wall_comments)")
         .eq("visibility", "public")
         .is("village_id", null)
         .order("created_at", { ascending: false })
