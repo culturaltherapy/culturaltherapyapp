@@ -718,6 +718,10 @@ function ContactEditor({ userId, profile, onSaved }: { userId: string; profile: 
   const [tribe, setTribe] = React.useState(profile.accepts_tribe_requests !== false);
   const [dms, setDms] = React.useState(profile.accepts_dms !== false);
   const [emailOnDm, setEmailOnDm] = React.useState((profile as any).email_on_dm !== false);
+  const [emailOnTribe, setEmailOnTribe] = React.useState((profile as any).email_on_tribe_activity !== false);
+  const [emailOnConnections, setEmailOnConnections] = React.useState((profile as any).email_on_connections !== false);
+  const [emailOnReplies, setEmailOnReplies] = React.useState((profile as any).email_on_replies !== false);
+  const [emailOnLikesComments, setEmailOnLikesComments] = React.useState((profile as any).email_on_likes_comments !== false);
   const [calls, setCalls] = React.useState(profile.accepts_calls === true);
   const [video, setVideo] = React.useState(profile.accepts_video === true);
   const [visibility, setVisibility] = React.useState<"public" | "tribe" | "private">(
@@ -736,6 +740,10 @@ function ContactEditor({ userId, profile, onSaved }: { userId: string; profile: 
         accepts_tribe_requests: tribe,
         accepts_dms: dms,
         email_on_dm: emailOnDm,
+        email_on_tribe_activity: emailOnTribe,
+        email_on_connections: emailOnConnections,
+        email_on_replies: emailOnReplies,
+        email_on_likes_comments: emailOnLikesComments,
         accepts_calls: canAcceptCalls ? calls : false,
         accepts_video: canAcceptCalls ? video : false,
         connections_visibility: visibility,
@@ -756,6 +764,30 @@ function ContactEditor({ userId, profile, onSaved }: { userId: string; profile: 
           Email me when I get a new message
           <span className="text-xs text-ink3">(once per thread per 15 min)</span>
         </label>
+      </div>
+
+      <div className="mt-5 pt-4 border-t border-line">
+        <p className="eyebrow mb-2">Email notifications</p>
+        <p className="text-sm text-ink2 mb-2">Which activity should also email you, on top of showing up in your notifications bell?</p>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm text-ink2">
+            <input type="checkbox" checked={emailOnTribe} onChange={(e) => setEmailOnTribe(e.target.checked)} className="accent-terracotta" />
+            Tribe activity (requests, invitations, acceptances)
+          </label>
+          <label className="flex items-center gap-2 text-sm text-ink2">
+            <input type="checkbox" checked={emailOnConnections} onChange={(e) => setEmailOnConnections(e.target.checked)} className="accent-terracotta" />
+            Connection requests and acceptances
+          </label>
+          <label className="flex items-center gap-2 text-sm text-ink2">
+            <input type="checkbox" checked={emailOnReplies} onChange={(e) => setEmailOnReplies(e.target.checked)} className="accent-terracotta" />
+            Replies to your Discussion threads
+          </label>
+          <label className="flex items-center gap-2 text-sm text-ink2">
+            <input type="checkbox" checked={emailOnLikesComments} onChange={(e) => setEmailOnLikesComments(e.target.checked)} className="accent-terracotta" />
+            Likes and comments on your posts, photos, and prompts
+            <span className="text-xs text-ink3">(at most once per item per hour)</span>
+          </label>
+        </div>
       </div>
 
       <div className="mt-5 pt-4 border-t border-line">

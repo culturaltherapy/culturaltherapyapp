@@ -138,6 +138,154 @@ const TEMPLATES: Record<string, Tpl> = {
         { label: "Open Cultural Therapy", href: `${APP_URL}/home` }
       ),
   },
+  tribe_invitation: {
+    subject: (p) => `${p?.actor_alias ?? "A member"} invited you to join a Tribe`,
+    html: (p) => {
+      const alias = escapeHtml(p?.actor_alias ?? "A member");
+      const tribeName = escapeHtml(p?.tribe_name ?? "a Tribe");
+      const href = p?.tribe_id ? `${APP_URL}/tribes/${p.tribe_id}` : `${APP_URL}/tribes`;
+      return shell(
+        `${alias} invited you to ${tribeName}.`,
+        `<p>You've been invited to join a Tribe on Cultural Therapy.</p>`,
+        { label: "View invitation", href }
+      );
+    },
+  },
+  tribe_request_received: {
+    subject: (p) => `${p?.actor_alias ?? "A member"} wants to join ${p?.tribe_name ?? "your Tribe"}`,
+    html: (p) => {
+      const alias = escapeHtml(p?.actor_alias ?? "A member");
+      const tribeName = escapeHtml(p?.tribe_name ?? "your Tribe");
+      const href = p?.tribe_id ? `${APP_URL}/tribes/${p.tribe_id}` : `${APP_URL}/tribes`;
+      return shell(
+        `${alias} wants to join ${tribeName}.`,
+        `<p>Someone has asked to join a Tribe you own on Cultural Therapy.</p>`,
+        { label: "Review request", href }
+      );
+    },
+  },
+  tribe_accepted: {
+    subject: (p) => `You're in — welcome to ${p?.tribe_name ?? "your new Tribe"}`,
+    html: (p) => {
+      const tribeName = escapeHtml(p?.tribe_name ?? "your new Tribe");
+      const href = p?.tribe_id ? `${APP_URL}/tribes/${p.tribe_id}` : `${APP_URL}/tribes`;
+      return shell(
+        `You're in.`,
+        `<p>Your request to join <strong>${tribeName}</strong> was accepted.</p>`,
+        { label: "Open the Tribe", href }
+      );
+    },
+  },
+  connection_request: {
+    subject: (p) => `${p?.actor_alias ?? "A member"} wants to connect`,
+    html: (p) => {
+      const alias = escapeHtml(p?.actor_alias ?? "A member");
+      return shell(
+        `${alias} wants to connect.`,
+        `<p>You've got a new connection request on Cultural Therapy.</p>`,
+        { label: "Review request", href: `${APP_URL}/connections` }
+      );
+    },
+  },
+  connection_accepted: {
+    subject: (p) => `${p?.actor_alias ?? "A member"} accepted your connection request`,
+    html: (p) => {
+      const alias = escapeHtml(p?.actor_alias ?? "A member");
+      return shell(
+        `${alias} accepted your request.`,
+        `<p>You're now connected on Cultural Therapy.</p>`,
+        { label: "View connections", href: `${APP_URL}/connections` }
+      );
+    },
+  },
+  thread_reply: {
+    subject: (p) => `${p?.actor_alias ?? "A member"} replied to your thread`,
+    html: (p) => {
+      const alias = escapeHtml(p?.actor_alias ?? "A member");
+      const excerpt = escapeHtml(p?.excerpt ?? "");
+      return shell(
+        `${alias} replied to your thread.`,
+        `<p>There's a new reply on a thread you started in Discussions.</p>
+         ${excerpt ? `<p style="margin-top:14px;background:${BRAND.parchment};border-left:3px solid ${BRAND.terracotta};padding:10px 14px;border-radius:6px;font-style:italic;">${excerpt}</p>` : ""}`,
+        { label: "Open Discussions", href: `${APP_URL}/discussions` }
+      );
+    },
+  },
+  post_comment: {
+    subject: (p) => `${p?.actor_alias ?? "A member"} commented on your post`,
+    html: (p) => {
+      const alias = escapeHtml(p?.actor_alias ?? "A member");
+      const excerpt = escapeHtml(p?.excerpt ?? "");
+      return shell(
+        `${alias} commented on your post.`,
+        `${excerpt ? `<p style="background:${BRAND.parchment};border-left:3px solid ${BRAND.terracotta};padding:10px 14px;border-radius:6px;font-style:italic;">${excerpt}</p>` : "<p>Someone commented on your wall post.</p>"}
+         <p style="color:${BRAND.ink3};font-size:13px;margin-top:18px;">You can switch these emails off any time in <em>Profile → Edit → Contact preferences</em>.</p>`,
+        { label: "View your wall", href: `${APP_URL}/profile` }
+      );
+    },
+  },
+  post_like: {
+    subject: (p) => `${p?.actor_alias ?? "A member"} liked your post`,
+    html: (p) => {
+      const alias = escapeHtml(p?.actor_alias ?? "A member");
+      return shell(
+        `${alias} liked your post.`,
+        `<p>Someone liked your wall post on Cultural Therapy.</p>
+         <p style="color:${BRAND.ink3};font-size:13px;margin-top:18px;">You can switch these emails off any time in <em>Profile → Edit → Contact preferences</em>.</p>`,
+        { label: "View your wall", href: `${APP_URL}/profile` }
+      );
+    },
+  },
+  media_comment: {
+    subject: (p) => `${p?.actor_alias ?? "A member"} commented on your photo`,
+    html: (p) => {
+      const alias = escapeHtml(p?.actor_alias ?? "A member");
+      const excerpt = escapeHtml(p?.excerpt ?? "");
+      return shell(
+        `${alias} commented on your gallery.`,
+        `${excerpt ? `<p style="background:${BRAND.parchment};border-left:3px solid ${BRAND.terracotta};padding:10px 14px;border-radius:6px;font-style:italic;">${excerpt}</p>` : "<p>Someone commented on something in your gallery.</p>"}
+         <p style="color:${BRAND.ink3};font-size:13px;margin-top:18px;">You can switch these emails off any time in <em>Profile → Edit → Contact preferences</em>.</p>`,
+        { label: "View your gallery", href: `${APP_URL}/profile` }
+      );
+    },
+  },
+  media_like: {
+    subject: (p) => `${p?.actor_alias ?? "A member"} liked your photo`,
+    html: (p) => {
+      const alias = escapeHtml(p?.actor_alias ?? "A member");
+      return shell(
+        `${alias} liked something in your gallery.`,
+        `<p>Someone liked a photo or video in your gallery.</p>
+         <p style="color:${BRAND.ink3};font-size:13px;margin-top:18px;">You can switch these emails off any time in <em>Profile → Edit → Contact preferences</em>.</p>`,
+        { label: "View your gallery", href: `${APP_URL}/profile` }
+      );
+    },
+  },
+  prompt_comment: {
+    subject: (p) => `${p?.actor_alias ?? "A member"} commented on your answer`,
+    html: (p) => {
+      const alias = escapeHtml(p?.actor_alias ?? "A member");
+      const excerpt = escapeHtml(p?.excerpt ?? "");
+      return shell(
+        `${alias} commented on your answer.`,
+        `${excerpt ? `<p style="background:${BRAND.parchment};border-left:3px solid ${BRAND.terracotta};padding:10px 14px;border-radius:6px;font-style:italic;">${excerpt}</p>` : "<p>Someone commented on one of your profile prompts.</p>"}
+         <p style="color:${BRAND.ink3};font-size:13px;margin-top:18px;">You can switch these emails off any time in <em>Profile → Edit → Contact preferences</em>.</p>`,
+        { label: "View your profile", href: `${APP_URL}/profile` }
+      );
+    },
+  },
+  prompt_like: {
+    subject: (p) => `${p?.actor_alias ?? "A member"} liked your answer`,
+    html: (p) => {
+      const alias = escapeHtml(p?.actor_alias ?? "A member");
+      return shell(
+        `${alias} liked your answer.`,
+        `<p>Someone liked one of your profile prompts.</p>
+         <p style="color:${BRAND.ink3};font-size:13px;margin-top:18px;">You can switch these emails off any time in <em>Profile → Edit → Contact preferences</em>.</p>`,
+        { label: "View your profile", href: `${APP_URL}/profile` }
+      );
+    },
+  },
   report_crisis: {
     subject: (_p) => `🚨 Crisis-severity report on Cultural Therapy`,
     html: (p) => {

@@ -53,6 +53,10 @@ supabase functions deploy send-account-emails --no-verify-jwt
 - `deletion_completed` (sent by admin when manually fulfilling a request)
 - `direct_message`
 - `report_crisis`
+- `tribe_invitation`, `tribe_request_received`, `tribe_accepted` — gated by `profiles.email_on_tribe_activity`
+- `connection_request`, `connection_accepted` — gated by `profiles.email_on_connections`
+- `thread_reply` — gated by `profiles.email_on_replies`, debounced 15 min per thread
+- `post_comment`, `post_like`, `media_comment`, `media_like`, `prompt_comment`, `prompt_like` — gated by `profiles.email_on_likes_comments`, debounced 60 min per item
 
 ## Manually drain the queue
 
